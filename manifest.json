@@ -1,0 +1,14 @@
+{
+	"manifest_version": 3,  
+	"name": "Tsweeft",
+	"version": "1.0",
+	"description": "Easy chat translations with Tsweeft",
+	"action": {
+	  "default_popup": "popup.html",
+	  "default_icon": "icon.png"
+	},
+	"permissions": [
+	  "activeTab"  // Permission to interact with the currently active tab
+	]
+  }
+  
