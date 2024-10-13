@@ -1,0 +1,34 @@
+# ignore chromium files in the downloaded extension folder
+chromium/
+
+# ignore node_modules
+node_modules/
+
+# ignore rollup and terser cache
+.cache/
+
+# ignore bundled files
+dist/
+
+# ignore IDE settings
+.idea/
+
+# ignore logs
+logs/
+
+# ignore macOS files
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ignore temporary files
+*.log
+*.tmp
+*.temp
+*.swp
+
+# ignore vs code settings
+.vscode/

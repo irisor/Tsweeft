@@ -1,14 +1,39 @@
 {
-	"manifest_version": 3,  
-	"name": "Tsweeft",
+	"manifest_version": 3,
+	"name": "Tsweeft - Chat Translator Extension",
 	"version": "1.0",
-	"description": "Easy chat translations with Tsweeft",
-	"action": {
-	  "default_popup": "popup.html",
-	  "default_icon": "icon.png"
-	},
+	"description": "A Chrome extension that translates chat messages between two languages and allows users to interact with chatbots on various websites.",
 	"permissions": [
-	  "activeTab"  // Permission to interact with the currently active tab
-	]
+	  "activeTab",  // Allows interaction with the current active tab
+	  "scripting",  // Needed to execute scripts in the page
+	  "storage"     // Optional: To save user settings, such as language preferences
+	],
+	"host_permissions": [
+	  "*://*/*"  // Allows access to all websites (modify this as necessary to limit access to specific domains)
+	],
+	// "background": {
+	//   "service_worker": "dist/background.js"  // Background script for handling tasks
+	// },
+	"action": {
+	  "default_popup": "public/popup.html",   // Popup HTML file
+	  "default_icon": "public/icons/icon.png"
+	},
+	"content_scripts": [
+	  {
+		"matches": ["*://*/*"],  // Inject scripts into all pages (if needed, this can be restricted to specific domains)
+		// "js": ["src/content.js"],  // The content script that interacts with the DOM (e.g., detecting and injecting into chat elements)
+		"js": ["dist/content.js"],             // Use the bundled content.js
+		"run_at": "document_end",  // Runs when the DOM is fully loaded
+		"all_frames": true  // Ensures the script is injected into all iframes on the page
+	  }
+	],
+	"content_security_policy": {
+	  "extension_pages": "script-src 'self'; object-src 'self';"
+	}
+	// "icons": {
+	//   "16": "icons/icon16.png",
+	//   "48": "icons/icon48.png",
+	//   "128": "icons/icon128.png"
+	// }
   }
   
