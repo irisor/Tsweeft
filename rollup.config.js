@@ -19,7 +19,9 @@ export default {
     commonjs(),                       // Converts CommonJS modules to ES6
     terser(),                         // Minifies the code
     scss({
+      output: 'dist/',
       fileName: 'styles.css',
-    })
-  ]
+      sourceMap: true,
+    }),
+  ],
 };

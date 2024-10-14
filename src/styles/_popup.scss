@@ -1,0 +1,7 @@
+body {
+	background: greenyellow;
+}
+
+.button {
+	@include button-base();
+}

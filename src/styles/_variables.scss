@@ -1,0 +1,28 @@
+body {
+	color: yellow;
+	&--dark {
+		color: black;
+	}
+}
+
+@mixin something() {
+	position: relative;	
+}
+
+@mixin button-base() {
+  
+	position: relative;
+	display: inline-flex;
+	position: relative;
+	height: 50px;
+	border: none;
+	vertical-align: middle;
+  
+	&:hover { cursor: pointer; }
+  
+	&:disabled {
+	  color: grey;
+	  cursor: default;
+	  pointer-events: none;
+	}
+  }

@@ -1,4 +1,4 @@
-import './styles.scss';
+import './styles/index.scss';
 
 document.addEventListener('DOMContentLoaded', () => {
     const partnerLangSelect = document.getElementById('partner-lang');
