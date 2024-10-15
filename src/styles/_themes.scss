@@ -1,0 +1,42 @@
+// Themes
+@mixin theme-light() {
+	color-scheme: light;
+	--text: #0a0e0d;
+	--background: #f4f7f7;
+	--primary: #789d91;
+	--secondary: #b0bec6;
+	--accent: #929ab0;
+} 
+
+@mixin theme-dark() {
+	color-scheme: dark;
+	--text: #f0f4f3;
+	--background: #090c0c;
+	--primary: #63887c;
+	--secondary: #3a4850;
+	--accent: #4f576d;
+}
+
+// Fallback - light theme
+body {
+	@include theme-light;
+}
+
+// Fallback - device theme settings
+
+@media (prefers-color-scheme: dark) {
+	body {
+		@include theme-dark;
+	}
+}
+
+// App theme settings
+
+html[data-theme="light"] {
+	@include theme-light;
+}
+
+html[data-theme="dark"] {
+	@include theme-dark;
+}
+

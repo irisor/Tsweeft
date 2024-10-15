@@ -6,7 +6,7 @@ import scss from 'rollup-plugin-scss';
 export default {
   input: {
     popup: 'src/popup.js',           // Entry point for popup logic
-    // background: 'src/background.js',  // Entry point for background service worker
+    background: 'src/background.js',  // Entry point for background service worker
     content: 'src/content.js'         // Entry point for content script
   },
   output: {

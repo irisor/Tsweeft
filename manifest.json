@@ -11,12 +11,12 @@
 	"host_permissions": [
 	  "*://*/*"  // Allows access to all websites (modify this as necessary to limit access to specific domains)
 	],
-	// "background": {
-	//   "service_worker": "dist/background.js"  // Background script for handling tasks
-	// },
+	"background": {
+	  "service_worker": "dist/background.js"  // Background script for handling tasks
+	},
 	"action": {
 	  "default_popup": "public/popup.html",   // Popup HTML file
-	  "default_icon": "public/icons/icon.png"
+	  "default_icon": "public/icons/tsweeft-light.png"
 	},
 	"content_scripts": [
 	  {

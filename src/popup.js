@@ -9,10 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const myTranslatedText = document.getElementById('my-translated-text');
     const sendButton = document.getElementById('send-btn');
 
-    // Set default language options
-    partnerLangSelect.value = 'en';  // Default to English
-    myLangSelect.value = 'es';       // Default to Spanish
-
     // Function to handle translation API call
     async function translateText(text, fromLang, toLang) {
         // Call to translation API would go here.
@@ -59,6 +55,8 @@ document.addEventListener('DOMContentLoaded', () => {
             updatePartnerText(message.text);
         }
     });
+
+    document.addEventListener('click', handleOutsideClick);
 });
 
 // Function to inject the translated text into the chat (runs in the context of the webpage)
@@ -69,5 +67,13 @@ function injectTextIntoChat(finalText) {
         chatInput.value = finalText;
         const event = new Event('input', { bubbles: true });
         chatInput.dispatchEvent(event);  // Trigger chat app to recognize input
+    }
+}
+
+function handleOutsideClick(event) {
+    const popupContainer = document.getElementById('popup-container');
+
+    if (popupContainer && !popupContainer.contains(event.target)) {
+        window.close();
     }
 }

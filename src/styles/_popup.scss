@@ -1,7 +1,82 @@
-body {
-	background: greenyellow;
+.popup-container {
+	display: flex;
+	flex-direction: column;
+	gap: 15px;
 }
 
-.button {
-	@include button-base();
+h1 {
+	color: var(--primary);
+	font-size: 1.5rem;
+	text-align: center;
+	margin-bottom: 10px;
+}
+
+// Language selection styles
+.language-selection {
+	display: flex;
+	justify-content: space-between;
+	gap: 10px;
+
+	&__item {
+		flex: 1;
+	}
+
+	label {
+		display: block;
+		margin-bottom: 5px;
+		font-weight: bold;
+	}
+
+	select {
+		width: 100%;
+		padding: 5px;
+		border: 1px solid var(--secondary);
+		border-radius: 4px;
+		background-color: var(--background);
+		color: var(--text);
+	}
+}
+
+// Textarea styles
+.language-text {
+	width: 100%;
+	padding: 10px;
+	border: 1px solid var(--secondary);
+	border-radius: 4px;
+	resize: vertical;
+	background-color: var(--background);
+	color: var(--text);
+
+	&:focus {
+		outline: none;
+		border-color: var(--primary);
+	}
+
+	&[readonly] {
+		background-color: var(--secondary);
+		opacity: 0.7;
+	}
+}
+
+// Button styles
+#send-btn {
+	background-color: var(--primary);
+	color: var(--background);
+	border: none;
+	padding: 10px 20px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-weight: bold;
+	transition: background-color 0.3s ease;
+
+	&:hover {
+		background-color: var(--accent);
+	}
+}
+
+// Label styles
+label {
+	font-weight: bold;
+	margin-bottom: 5px;
+	display: block;
 }
