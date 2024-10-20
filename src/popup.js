@@ -8,12 +8,44 @@ document.addEventListener('DOMContentLoaded', () => {
     const myText = document.getElementById('my-text');
     const myTranslatedText = document.getElementById('my-translated-text');
     const sendButton = document.getElementById('send-btn');
+    let translator;
+
+    (async function initTranslation() {
+
+        const languagePair = {
+            sourceLanguage: 'en', // Or detect the source language with the Language Detection API
+            targetLanguage: 'es',
+        };
+
+        const canTranslate = await translation.canTranslate(languagePair);
+        if (canTranslate !== 'no') {
+            if (canTranslate === 'readily') {
+                // The translator can immediately be used.
+                translator = await translation.createTranslator(languagePair);
+            } else {
+                // The translator can be used after the model download.
+                console.log('Translation needs to be downloaded', canTranslate);
+                translator = await translation.createTranslator(languagePair);
+                translator.addEventListener('downloadprogress', (e) => {
+                    console.log(e.loaded, e.total);
+                });
+                await translator.ready;
+            }
+        } else {
+            console.log('No translation available');
+            // The translator can't be used at all.
+        }
+    })();
 
     // Function to handle translation API call
     async function translateText(text, fromLang, toLang) {
-        // Call to translation API would go here.
-        // This is a placeholder implementation.
-        return `[Translated: ${text}]`;
+    
+
+        const translatedText = await translator.translate(text);
+        //   const readableStreamOfText = await translator.translateStreaming(`
+        //     Four score and seven years ago our fathers brought forth, upon this...
+        //   `);
+        return translatedText;
     }
 
     // Function to update the partner text and perform translation
