@@ -11,25 +11,20 @@
     <h1>Tsweeft Chat Translator</h1>
     <!-- Language Selection -->
     <section class="language-selection">
-      <section class="language-selection__item language-selection__item--partner">
-        <label for="partner-lang">Partner Language:</label>
-        <select id="partner-lang">
-          <option value="en">English</option>
-          <option value="es" selected>Spanish</option>
-          <option value="ja">Japanese</option>
-        </select>
-      </section>
       <section class="language-selection__item" class="language-selection__item--my">
         <label for="my-lang">My Language:</label>
         <select id="my-lang">
-          <option value="en" selected>English</option>
-          <option value="es">Spanish</option>
-          <option value="ja">Japanese</option>
         </select>
       </section>
+      <section class="language-selection__item language-selection__item--partner">
+        <label for="partner-lang">Partner Language:</label>
+        <select id="partner-lang">
+        </select>
+      </section>
+      <button id="set-langs-btn" class="btn">Update</button>
     </section>
     <!-- Partner Text -->
-    <label for="partner-text">Partner Text (Original):</label>
+    <label for="partner-text">Partner Text:</label>
     <textarea id="partner-text" class="language-text" rows="5" readonly></textarea>
     <!-- Translated Partner Text -->
     <label for="translated-partner-text">Translated Partner Text:</label>
@@ -41,7 +36,7 @@
     <label for="my-translated-text">My Translated Text:</label>
     <textarea id="my-translated-text" class="language-text" rows="5"></textarea>
     <!-- Send Button -->
-    <button id="send-btn">Send</button>
+    <button id="send-btn" class="btn">Send</button>
   </div>
   <script src="../dist/popup.js" type="module"></script>
 </body>

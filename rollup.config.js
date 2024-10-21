@@ -17,7 +17,7 @@ export default {
   plugins: [
     resolve(),                        // Resolves modules from node_modules
     commonjs(),                       // Converts CommonJS modules to ES6
-    terser(),                         // Minifies the code
+    // terser(),                         // Minifies the code
     scss({
       output: 'dist/',
       fileName: 'styles.css',

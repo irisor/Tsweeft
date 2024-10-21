@@ -4,25 +4,25 @@
 	"version": "1.0",
 	"description": "A Chrome extension that translates chat messages between two languages and allows users to interact with chatbots on various websites.",
 	"permissions": [
-	  "activeTab",  // Allows interaction with the current active tab
-	  "scripting",  // Needed to execute scripts in the page
-	  "storage"     // Optional: To save user settings, such as language preferences
+	  "activeTab", 
+	  "scripting",
+	  "storage" 
 	],
-	"host_permissions": [
-	  "*://*/*"  // Allows access to all websites (modify this as necessary to limit access to specific domains)
-	],
+	// "host_permissions": [
+	//   "*://*/*"  // Allows access to all websites (modify this as necessary to limit access to specific domains)
+	// ],
 	"background": {
-	  "service_worker": "dist/background.js"  // Background script for handling tasks
+	  "service_worker": "dist/background.js"
 	},
 	"action": {
-	  "default_popup": "public/popup.html",   // Popup HTML file
+	  "default_popup": "public/popup.html",
 	  "default_icon": "public/icons/tsweeft-light.png"
 	},
 	"content_scripts": [
 	  {
-		"matches": ["*://*/*"],  // Inject scripts into all pages (if needed, this can be restricted to specific domains)
+		"matches": ["*://*/*"],  // Inject scripts into all pages 
 		// "js": ["src/content.js"],  // The content script that interacts with the DOM (e.g., detecting and injecting into chat elements)
-		"js": ["dist/content.js"],             // Use the bundled content.js
+		"js": ["dist/content.js"],
 		"run_at": "document_end",  // Runs when the DOM is fully loaded
 		"all_frames": true  // Ensures the script is injected into all iframes on the page
 	  }

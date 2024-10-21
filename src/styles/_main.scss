@@ -12,3 +12,23 @@ body {
 	width: 350px;
 	padding: 20px;
 }
+
+.btn {
+	background-color: var(--primary);
+	color: var(--background);
+	border: none;
+	padding: 10px 10px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-weight: bold;
+	transition: background-color 0.3s ease;
+
+	&:hover {
+		background-color: var(--accent);
+	}
+}
+
+label {
+	display: block;
+	font-weight: bold;
+}
