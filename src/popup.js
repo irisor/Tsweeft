@@ -1,5 +1,6 @@
 import './styles/index.scss';
-import { getAllLanguages, getTargetLanguages } from './utils/language-pair-utils';
+import { getAllLanguages, getDisplayName, getTargetLanguages } from './utils/languagePairUtils';
+import { debounce } from './utils/timing';
 
 document.addEventListener('DOMContentLoaded', () => {
     const partnerLangSelect = document.getElementById('partner-lang');
@@ -12,96 +13,113 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendButton = document.getElementById('send-btn');
     let myToPartnerTranslator = null;
     let partnerToMyTranslator = null;
+    const browserLanguage = navigator.language.split('-')[0];
     let selectedLanguages = {
         partner: {
             code: 'es',
             displayName: 'Spanish'
         },
         my: {
-            code: 'en',
-            displayName: 'English'
+            code: browserLanguage,
+            displayName: getDisplayName(browserLanguage) || browserLanguage
         }
     };
 
-    (function init() {
-        initLanguages();
-        initTranslation();
+    (async function init() {
+        await initLanguages();
+        try {
+            await initTranslation();
+        } catch (error) {
+            console.log('Failed to setup translation', error);
+        }
     })();
 
     document.addEventListener('click', handleOutsideClick);
 
     async function initTranslation() {
+        try {
+            const [myToPartner, partnerToMy] = await Promise.all([
+                setupTranslation(selectedLanguages.my.code, selectedLanguages.partner.code),
+                setupTranslation(selectedLanguages.partner.code, selectedLanguages.my.code),
+            ]);
 
+            myToPartnerTranslator = myToPartner;
+            partnerToMyTranslator = partnerToMy;
+        } catch (error) {
+            console.log('Failed to setup translation', error);
+            return Promise.reject(error);
+        }
+    };
+
+    async function setupTranslation(fromLang, toLang) {
         const languagePair = {
-            sourceLanguage: 'en', // Or detect the source language with the Language Detection API
-            targetLanguage: 'es',
+            sourceLanguage: fromLang,
+            targetLanguage: toLang,
         };
 
         const canTranslate = await translation.canTranslate(languagePair);
         if (canTranslate !== 'no') {
             if (canTranslate === 'readily') {
-                // The translator can immediately be used.
-                myToPartnerTranslator = await translation.createTranslator(languagePair);
+                return await translation.createTranslator(languagePair);
             } else {
-                // The translator can be used after the model download.
                 console.log('Translation needs to be downloaded', canTranslate);
-                myToPartnerTranslator = await translation.createTranslator(languagePair);
-                myToPartnerTranslator.addEventListener('downloadprogress', (e) => {
+                const translator = await translation.createTranslator(languagePair);
+                translator.addEventListener('downloadprogress', (e) => {
                     console.log(e.loaded, e.total);
                 });
-                await myToPartnerTranslator.ready;
+                await translator.ready;
+                return translator;
             }
         } else {
             console.log('No translation available');
-            // The translator can't be used at all.
+            return null
         }
     };
 
     async function initLanguages() {
-        chrome.storage.local.get('selectedLanguages', (result) => {
-            const storedLanguages = result.selectedLanguages;
-            if (storedLanguages) {
-                selectedLanguages = storedLanguages;
-            }
-            if (selectedLanguages) {
-                handleMyLangChange(selectedLanguages.my.code);
-                setTimeout(() => partnerLangSelect.value = selectedLanguages.partner.code, 200);
-                setTimeout(() => myLangSelect.value = selectedLanguages.my.code, 200);
-                // myLangSelect.value = selectedLanguages.my.code;
-                // myLangSelect.value = 'de';
-            }
+        const result = await new Promise(resolve => {
+            chrome.storage.local.get('selectedLanguages', resolve);
         });
-    };
 
-    // Function to handle translation API call
-    async function translateText(text, fromLang, toLang) {
+        if (result.selectedLanguages) {
+            selectedLanguages = result.selectedLanguages;
+        }
 
+        handleMyLangChange(selectedLanguages.my.code);
+        partnerLangSelect.value = selectedLanguages.partner.code;
+        myLangSelect.value = selectedLanguages.my.code;
+    }
 
-        const translatedText = await myToPartnerTranslator.translate(text);
+    async function translateText(text, translator) {
+        if (!translator) {
+            return '';
+        }
+        const translatedText = await translator.translate(text);
         //   const readableStreamOfText = await translator.translateStreaming(`
         //     Four score and seven years ago our fathers brought forth, upon this...
         //   `);
         return translatedText;
     }
 
-    // Function to update the partner text and perform translation
+    // Update partner text and translated partner text
     function updatePartnerText(newText) {
         partnerText.value = newText;
 
-        // Translate partner's text
-        translateText(newText, partnerLangSelect.value, myLangSelect.value)
-            .then(translated => {
-                translatedPartnerText.value = translated;
-            });
+        debounce(() => {
+            translateText(newText, selectedLanguages.partner.code, selectedLanguages.my.code)
+                .then(translated => {
+                    translatedPartnerText.value = translated;
+                });
+        }, 500)();
     }
 
-    // When user inputs their text, translate it
-    myText.addEventListener('input', () => {
-        translateText(myText.value, myLangSelect.value, partnerLangSelect.value)
+    // Translate my text
+    myText.addEventListener('input', debounce(() => {
+        translateText(myText.value, myToPartnerTranslator)
             .then(translated => {
                 myTranslatedText.value = translated;
             });
-    });
+    }, 500));
 
     // Send translation
     sendButton.addEventListener('click', () => {
@@ -137,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleMyLangChange(value) {
         const selectedSourceLang = value;
-       
+
         partnerLangSelect.innerText = ''; // Clear existing options
 
         getTargetLanguages(selectedSourceLang).forEach(lang => {
@@ -147,15 +165,16 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Change languages after languages update
-
     setLangsBtn.addEventListener('click', async () => {
         selectedLanguages = {
-            selectedLanguages: {
-                partner: { code: partnerLangSelect.value, displayName: partnerLangSelect?.selectedOptions[0]?.textContent },
-                my: { code: myLangSelect.value, displayName: myLangSelect?.selectedOptions[0]?.textContent }
-            }
+            partner: { code: partnerLangSelect.value, displayName: partnerLangSelect?.selectedOptions[0]?.textContent },
+            my: { code: myLangSelect.value, displayName: myLangSelect?.selectedOptions[0]?.textContent }
         };
-        await chrome.storage.local.set(selectedLanguages);
+        initTranslation();
+        await chrome.storage.local.set({ selectedLanguages });
+        const event = new Event('input');
+        myText.dispatchEvent(event);
+
     });
 });
 
@@ -166,7 +185,7 @@ function injectTextIntoChat(finalText) {
     if (chatInput) {
         chatInput.value = finalText;
         const event = new Event('input', { bubbles: true });
-        chatInput.dispatchEvent(event);  // Trigger chat app to recognize input
+        chatInput.dispatchEvent(event); // Trigger chat app to recognize input
     }
 }
 
