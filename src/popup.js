@@ -1,5 +1,6 @@
 import './styles/index.scss';
 import { getAllLanguages, getDisplayName, getTargetLanguages } from './utils/languagePairUtils';
+import { handleMessage } from './utils/messageUtil';
 import { debounce } from './utils/timing';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -30,23 +31,19 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             await initTranslation();
         } catch (error) {
+            handleMessage('Failed to setup translation', 'error');
             console.log('Failed to setup translation', error);
         }
     })();
 
-    document.addEventListener('click', handleOutsideClick);
-
     async function initTranslation() {
+        let myToPartner, partnerToMy;
         try {
-            const [myToPartner, partnerToMy] = await Promise.all([
-                setupTranslation(selectedLanguages.my.code, selectedLanguages.partner.code),
-                setupTranslation(selectedLanguages.partner.code, selectedLanguages.my.code),
-            ]);
-
+            myToPartner = await setupTranslation(selectedLanguages.my.code, selectedLanguages.partner.code);
+            if (myToPartner) partnerToMy = await setupTranslation(selectedLanguages.partner.code, selectedLanguages.my.code);
             myToPartnerTranslator = myToPartner;
             partnerToMyTranslator = partnerToMy;
         } catch (error) {
-            console.log('Failed to setup translation', error);
             return Promise.reject(error);
         }
     };
@@ -62,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (canTranslate === 'readily') {
                 return await translation.createTranslator(languagePair);
             } else {
+                handleMessage('Translation needs to be downloaded', 'warning');
                 console.log('Translation needs to be downloaded', canTranslate);
                 const translator = await translation.createTranslator(languagePair);
                 translator.addEventListener('downloadprogress', (e) => {
@@ -71,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return translator;
             }
         } else {
+            handleMessage('No translation available for this language pair', 'error');
             console.log('No translation available');
             return null
         }
@@ -172,6 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         initTranslation();
         await chrome.storage.local.set({ selectedLanguages });
+        handleMessage(`Language pair updated to ${selectedLanguages.partner.displayName} to ${selectedLanguages.my.displayName}`, 'success');
         const event = new Event('input');
         myText.dispatchEvent(event);
 
@@ -186,13 +186,5 @@ function injectTextIntoChat(finalText) {
         chatInput.value = finalText;
         const event = new Event('input', { bubbles: true });
         chatInput.dispatchEvent(event); // Trigger chat app to recognize input
-    }
-}
-
-function handleOutsideClick(event) {
-    const popupContainer = document.getElementById('popup-container');
-
-    if (popupContainer && !popupContainer.contains(event.target)) {
-        window.close();
     }
 }
