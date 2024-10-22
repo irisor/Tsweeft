@@ -1,25 +1,46 @@
-// Example strategy to detect chat messages in an iframe or DOM element
-function detectChatMessages() {
-    // Placeholder for actual chat message detection logic.
-    // This could vary depending on the specific chatbot (e.g., mutation observers).
-    
-    const messages = document.querySelectorAll('.chat-message'); // Adjust selector as needed
-    
-    messages.forEach((messageElement) => {
-        const messageText = messageElement.innerText;
+console.log('Content script loaded');
+const chatUtils = {
+    outputMessages: document.querySelectorAll('.chatbot-input'),
 
-        // Send detected message to popup
-        chrome.runtime.sendMessage({
-            type: 'CHAT_MESSAGE_DETECTED',
-            text: messageText
+    detectChatMessages: function () {
+
+        const inputMessages = document.querySelectorAll('.chatbot-messages');
+
+        const lastMessageMap = {};
+        inputMessages.forEach((messageElement) => {
+            const messageText = messageElement.innerText;
+
+            if (!lastMessageMap[messageElement]) {
+                lastMessageMap[messageElement] = '';
+            }
+            const newText = messageText.replace(lastMessageMap[messageElement], '');
+            lastMessageMap[messageElement] = messageText;
+            if (newText) {
+                chrome.runtime.sendMessage({
+                    type: 'CHAT_MESSAGE_DETECTED',
+                    text: newText
+                });
+            }
         });
-    });
-}
+    },
 
-// Use MutationObserver to detect dynamic changes in the chat
-const chatContainer = document.querySelector('.chat-container');  // Adjust selector based on actual DOM structure
+    injectTextIntoChat: function (finalText) {
+        const targetElement = chatUtils.outputMessages[0];
+        if (targetElement) {
+            targetElement.value = finalText;
+            const event = new Event('input', { bubbles: true });
+            targetElement.dispatchEvent(event); // Trigger chat app to recognize input
+        }
+    }
+};
 
-if (chatContainer) {
-    const observer = new MutationObserver(detectChatMessages);
-    observer.observe(chatContainer, { childList: true, subtree: true });
-}
+// Expose chatUtils functions to popup.js
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    console.log('Received message:', request);
+    if (request.action === 'detectChatMessages') {
+        chatUtils.detectChatMessages();
+    } else if (request.action === 'injectTextIntoChat') {
+        chatUtils.injectTextIntoChat(request.finalText);
+    }
+});
+

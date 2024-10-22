@@ -34,6 +34,14 @@ document.addEventListener('DOMContentLoaded', () => {
             handleMessage('Failed to setup translation', 'error');
             console.log('Failed to setup translation', error);
         }
+        // Send message to content.js to detect chat messages
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs.length > 0) {
+                chrome.tabs.sendMessage(tabs[0].id, { action: 'detectChatMessages' });
+            } else {
+                console.error('No active tab found');
+            }
+        });
     })();
 
     async function initTranslation() {
@@ -102,10 +110,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Update partner text and translated partner text
     function updatePartnerText(newText) {
-        partnerText.value = newText;
+        partnerText.innerText = newText;
 
         debounce(() => {
-            translateText(newText, selectedLanguages.partner.code, selectedLanguages.my.code)
+            translateText(newText, partnerToMyTranslator)
                 .then(translated => {
                     translatedPartnerText.value = translated;
                 });
@@ -124,13 +132,13 @@ document.addEventListener('DOMContentLoaded', () => {
     sendButton.addEventListener('click', () => {
         const finalText = myTranslatedText.value;
 
-        // Send the final text to the content script to inject into the chat
+        // Send message to content.js to inject text into chat
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            chrome.scripting.executeScript({
-                target: { tabId: tabs[0].id },
-                func: injectTextIntoChat,
-                args: [finalText]
-            });
+            if (tabs.length > 0) {
+                chrome.tabs.sendMessage(tabs[0].id, { action: 'injectTextIntoChat', finalText });
+            } else {
+                console.error('No active tab found');
+            }
         });
     });
 
@@ -177,14 +185,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
     });
 });
-
-// Function to inject the translated text into the chat (runs in the context of the webpage)
-function injectTextIntoChat(finalText) {
-    // You would need to modify this logic based on how the chat input works for a particular website.
-    const chatInput = document.querySelector('input[type="text"], textarea');
-    if (chatInput) {
-        chatInput.value = finalText;
-        const event = new Event('input', { bubbles: true });
-        chatInput.dispatchEvent(event); // Trigger chat app to recognize input
-    }
-}
