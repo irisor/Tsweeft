@@ -26,7 +26,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // Listen for messages from the content script (chat detection)
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        if (message.type === 'CHAT_MESSAGE_DETECTED') {
+            updatePartnerText(message.text);
+        }
+    });
+
     (async function init() {
+        console.log('Initializing...');
+        initDisplay();
         await initLanguages();
         try {
             await initTranslation();
@@ -34,15 +43,14 @@ document.addEventListener('DOMContentLoaded', () => {
             handleMessage('Failed to setup translation', 'error');
             console.log('Failed to setup translation', error);
         }
-        // Send message to content.js to detect chat messages
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            if (tabs.length > 0) {
-                chrome.tabs.sendMessage(tabs[0].id, { action: 'detectChatMessages' });
-            } else {
-                console.error('No active tab found');
-            }
-        });
     })();
+
+    function initDisplay() {
+        myText.value = '';
+        myTranslatedText.value = '';
+        partnerText.value = '';
+        translatedPartnerText.value = '';
+    }
 
     async function initTranslation() {
         let myToPartner, partnerToMy;
@@ -110,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Update partner text and translated partner text
     function updatePartnerText(newText) {
-        partnerText.innerText = newText;
+        partnerText.value = newText;
 
         debounce(() => {
             translateText(newText, partnerToMyTranslator)
@@ -130,23 +138,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Send translation
     sendButton.addEventListener('click', () => {
-        const finalText = myTranslatedText.value;
+        const originalText = myText.value;
+        const translatedText = myTranslatedText.value;
 
         // Send message to content.js to inject text into chat
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             if (tabs.length > 0) {
-                chrome.tabs.sendMessage(tabs[0].id, { action: 'injectTextIntoChat', finalText });
+                chrome.tabs.sendMessage(tabs[0].id, { action: 'injectTextIntoChat', originalText, translatedText });
             } else {
                 console.error('No active tab found');
             }
         });
-    });
-
-    // Listen for messages from the content script (chat detection)
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-        if (message.type === 'CHAT_MESSAGE_DETECTED') {
-            updatePartnerText(message.text);
-        }
     });
 
     // Populate the source language select
@@ -163,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleMyLangChange(value) {
         const selectedSourceLang = value;
 
-        partnerLangSelect.innerText = ''; // Clear existing options
+        partnerLangSelect.value = ''; // Clear existing options
 
         getTargetLanguages(selectedSourceLang).forEach(lang => {
             const option = new Option(lang.displayName, lang.code);

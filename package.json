@@ -2,7 +2,7 @@
   "name": "tsweeft",
   "version": "1.0.0",
   "description": "A Chrome extension to translate chat messages between two languages.",
-  "main": "dist/popup.js",
+  "main": "dist/sidepanel.js",
   "type": "module",
   "scripts": {
     "build": "rollup -c",

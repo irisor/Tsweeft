@@ -4,35 +4,38 @@
 	"version": "1.0",
 	"description": "A Chrome extension that translates chat messages between two languages and allows users to interact with chatbots on various websites.",
 	"permissions": [
-	  "activeTab", 
-	  "scripting",
-	  "storage" 
+		"activeTab",
+		"scripting",
+		"sidePanel",
+		"storage"
 	],
 	// "host_permissions": [
 	//   "*://*/*"  // Allows access to all websites (modify this as necessary to limit access to specific domains)
 	// ],
 	"background": {
-	  "service_worker": "dist/background.js"
+		"service_worker": "dist/background.js"
 	},
 	"action": {
-	  "default_popup": "public/popup.html",
-	  "default_icon": "public/icons/tsweeft-light.png"
+		"default_icon": "public/icons/tsweeft-light.png",
+		"default_title": "Tsweeft"
+	},
+	"side_panel": {
+		"default_path": "public/sidepanel.html"
 	},
 	"content_scripts": [
-	  {
-		"matches": ["*://*/*"],  // Inject scripts into all pages 
-		"js": ["dist/content.js"],  // The content script that interacts with the DOM (e.g., detecting and injecting into chat elements)
-		"run_at": "document_end",  // Runs when the DOM is fully loaded
-		"all_frames": true  // Ensures the script is injected into all iframes on the page
-	  }
+		{
+			"matches": ["*://*/*"], // Inject scripts into all pages 
+			"js": ["dist/content.js"], // The content script that interacts with the DOM (e.g., detecting and injecting into chat elements)
+			"run_at": "document_end", // Runs when the DOM is fully loaded
+			"all_frames": true // Ensures the script is injected into all iframes on the page
+		}
 	],
 	"content_security_policy": {
-	  "extension_pages": "script-src 'self'; object-src 'self';"
+		"extension_pages": "script-src 'self'; object-src 'self';"
 	}
 	// "icons": {
 	//   "16": "icons/icon16.png",
 	//   "48": "icons/icon48.png",
 	//   "128": "icons/icon128.png"
 	// }
-  }
-  
+}
