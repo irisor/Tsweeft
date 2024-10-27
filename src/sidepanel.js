@@ -4,6 +4,7 @@ import { handleMessage } from './utils/messageUtil';
 import { debounce } from './utils/timing';
 
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('Side panel loaded.');
     const partnerLangSelect = document.getElementById('partner-lang');
     const myLangSelect = document.getElementById('my-lang');
     const setLangsBtn = document.getElementById('set-langs-btn');
@@ -28,8 +29,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Listen for messages from the content script (chat detection)
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-        if (message.type === 'CHAT_MESSAGE_DETECTED') {
+        console.log('sidePanel onMessage', message, sender, sendResponse);
+        if (message.type === 'chatMessageDetected') {
             updatePartnerText(message.text);
+        }
+    });
+
+    console.log('sidePanel before sendMessage sidePanelOpened');
+    // Send a message to the background script to activate the content script
+
+    chrome.runtime.sendMessage({ type: 'sidePanelOpened' }, (response) => {
+        if (chrome.runtime.lastError) {
+            console.error('Error in sending sidePanelOpened:', chrome.runtime.lastError.message);
+        } else if (response?.success) {
+            console.log('Side panel opened successfully.');
+        } else {
+            console.warn('No response received for sidePanelOpened message.');
         }
     });
 
@@ -137,20 +152,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 500));
 
     // Send translation
-    sendButton.addEventListener('click', () => {
-        const originalText = myText.value;
-        const translatedText = myTranslatedText.value;
+    sendButton?.addEventListener('click', async () => {
+        const originalText = document.getElementById('my-text')?.value || '';
+        const translatedText = document.getElementById('my-translated-text')?.value || '';
 
         // Send message to content.js to inject text into chat
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        await chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             if (tabs.length > 0) {
-                chrome.tabs.sendMessage(tabs[0].id, { action: 'injectTextIntoChat', originalText, translatedText });
+                chrome.tabs.sendMessage(tabs[0].id, { action: 'injectTextIntoChat', originalText, translatedText }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        console.error('Error injecting text into chat:', chrome.runtime.lastError.message);
+                    } else {
+                        console.log('Text injected into chat:', response);
+                    }
+                });
             } else {
-                console.error('No active tab found');
+                console.error('No active tab found to inject text.');
             }
         });
     });
-
+    
     // Populate the source language select
     getAllLanguages().forEach(lang => {
         const option = new Option(lang.displayName, lang.code);

@@ -1,74 +1,83 @@
 console.log('Content script loaded');
-const inputMessage = document.querySelector('.chatbot-messages');
-const outputMessage = document.querySelector('.chatbot-input');
 
-observerElement(inputMessage);
-const chatUtils = {
+// Listen for messages from the background script
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    const inputMessage = document.querySelector('.chatbot-messages');
+    const outputMessage = document.querySelector('.chatbot-input');
+    console.log('Content onMessage', message, sender);
 
-    injectTextIntoChat: function (originalText, translatedText) {
+    if (message.type === 'activateObserver') {
+        console.log('Activating observer on this tab.');
+
+        observerElement(inputMessage);
+        sendResponse({ success: true });
+        function observerElement(targetElement) {
+            console.log('Content.js observerElement', targetElement);
+
+            if (!targetElement) {
+                console.log('Messages to translate not found');
+                return;
+            }
+            sendText(targetElement.innerText);
+            // Observer setup
+            if (inputMessage) {
+                const observer = new MutationObserver((mutations) => {
+                    if (mutations.some(m => m.type === 'childList' || m.type === 'characterData')) {
+                        sendText(inputMessage.innerText);
+                    }
+                });
+
+                observer.observe(inputMessage, { childList: true, subtree: true });
+                console.log('Observer initialized for inputMessage.');
+
+                // Clean up observer on unload
+                window.addEventListener('beforeunload', () => observer.disconnect());
+            } else {
+                console.warn('No input message found to observe.');
+            }
+
+            function sendText(newText) {
+                if (!newText) return;
+
+                console.log('content before sendMessage chatMessageDetected');
+                // Send message to background script
+                console.log('Tsweeft detected new message: %s', newText);
+
+                chrome.runtime.sendMessage({
+                    type: 'chatMessageDetected',
+                    tabId: message.tabId,
+                    text: newText
+                }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        console.error('Error in sending chatMessageDetected:', chrome.runtime.lastError.message);
+                    } else {
+                        console.log('Message sent successfully:', response);
+                    }
+                });
+            }
+        }
+    }
+
+    if (message.action === 'injectTextIntoChat') {
+        injectTextIntoChat(message.originalText, message.translatedText);
+        sendResponse({ success: true });
+    }
+
+    if (message.type === 'sidePanelClosed') {
+        console.log('content sidePanelClosed', message);
+
+        // // Clean up the observer when the side panel is closed
+        // if (observer) {
+        //     observer.disconnect();
+        // }
+    }
+
+    function injectTextIntoChat(originalText, translatedText) {
         const targetElement = outputMessage;
         if (targetElement) {
             targetElement.value = translatedText;
             const event = new Event('input', { bubbles: true });
             targetElement.dispatchEvent(event); // Trigger chat app to recognize input
         }
-
-        // Store the original text in the lastMessageMap object and in session storage
-        let lastMessage = JSON.parse(sessionStorage.getItem('lastMessage')) || '';
-        lastMessage = lastMessage + originalText;
-        sessionStorage.setItem('lastMessage', JSON.stringify(lastMessage));
-    }
-
-};
-
-// Expose chatUtils functions to sidepanel.js
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'injectTextIntoChat') {
-        chatUtils.injectTextIntoChat(request.originalText, request.translatedText);
-    }
-});
-
-function observerElement(targetElement) {
-    console.log('observerElement', targetElement);
-
-    if (!targetElement) {
-        console.log('Messages to translate not found');
-        return;
-    }
-    sendText(targetElement.innerText);
-
-    // Create a MutationObserver instance
-    const observer = new MutationObserver((mutations) => {
-        console.log('observer', mutations);
-        if (mutations.some(mutation => mutation.type === 'attributes' ||
-            mutation.type === 'characterData' ||
-            mutation.type === 'childList')) {
-            const newText = targetElement.innerText;
-
-            sendText(newText);
-        }
-    });
-
-    // Configuration for the observer
-    const config = {
-        attributes: true,
-        childList: true,
-        characterData: true,
-        subtree: true
     };
-
-    // Start observing
-    observer.observe(targetElement, config);
-
-    function sendText(newText) {
-        if (!newText) {
-            return;
-        }
-        // Send message to background script
-        console.log('Chatbot detected new message: %s', newText);
-        chrome.runtime.sendMessage({
-            type: 'CHAT_MESSAGE_DETECTED',
-            text: newText
-        });
-    }
-}
+});
