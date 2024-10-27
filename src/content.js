@@ -1,4 +1,5 @@
 console.log('Content script loaded');
+let tabId = null;
 
 // Listen for messages from the background script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -7,10 +8,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log('Content onMessage', message, sender);
 
     if (message.type === 'activateObserver') {
-        console.log('Activating observer on this tab.');
+        tabId = message.tabId;
+        console.log('Activating observer on this tab.', tabId);
 
         observerElement(inputMessage);
         sendResponse({ success: true });
+        return true;
         function observerElement(targetElement) {
             console.log('Content.js observerElement', targetElement);
 

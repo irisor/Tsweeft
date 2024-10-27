@@ -2,6 +2,7 @@ import './styles/index.scss';
 import { getAllLanguages, getDisplayName, getTargetLanguages } from './utils/languagePairUtils';
 import { handleMessage } from './utils/messageUtil';
 import { debounce } from './utils/timing';
+let tabId = null
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Side panel loaded.');
@@ -31,7 +32,12 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         console.log('sidePanel onMessage', message, sender, sendResponse);
         if (message.type === 'chatMessageDetected') {
+            tabId = message.tabId;
             updatePartnerText(message.text);
+        }
+
+        if (message.type === 'notOriginalTab') {
+            handleMessage('The translator works only in the original tab', 'error');
         }
     });
 
@@ -47,6 +53,8 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('No response received for sidePanelOpened message.');
         }
     });
+
+    console.log('sidePanel before init');
 
     (async function init() {
         console.log('Initializing...');
@@ -157,21 +165,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const translatedText = document.getElementById('my-translated-text')?.value || '';
 
         // Send message to content.js to inject text into chat
-        await chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            if (tabs.length > 0) {
-                chrome.tabs.sendMessage(tabs[0].id, { action: 'injectTextIntoChat', originalText, translatedText }, (response) => {
-                    if (chrome.runtime.lastError) {
-                        console.error('Error injecting text into chat:', chrome.runtime.lastError.message);
-                    } else {
-                        console.log('Text injected into chat:', response);
-                    }
-                });
+        chrome.tabs.sendMessage(tabId, { action: 'injectTextIntoChat', originalText, translatedText }, (response) => {
+            if (chrome.runtime.lastError) {
+                console.error('Error injecting text into chat:', chrome.runtime.lastError.message);
             } else {
-                console.error('No active tab found to inject text.');
+                console.log('Text injected into chat:', response);
             }
         });
     });
-    
+
     // Populate the source language select
     getAllLanguages().forEach(lang => {
         const option = new Option(lang.displayName, lang.code);

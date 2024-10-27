@@ -1,17 +1,20 @@
-let sidePanels = {};
-let tabId;
+let originalTabId = null;
 
 // Listen for messages from the side panel or content scripts
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log('Background onMessage', message, sender);
 
-    if (message.type === 'sidePanelOpened') {
-         // Ensure we return true immediately to keep the message channel open
-		 handleSidePanelOpened().then(sendResponse({ success: true })).catch((error) => {
-            console.error('Error handling sidePanelOpened:', error.message);
-            sendResponse({ success: false, error: error.message });
-        });
-        return true; // Keep the message channel open for async response
+	if (message.type === 'sidePanelOpened') {
+        handleSidePanelOpened()
+            .then(() => {
+                console.log('Background sidePanelOpened after handleSidePanelOpened inside then');
+                sendResponse({ success: true });
+            })
+            .catch((error) => {
+                console.error('Error handling sidePanelOpened:', error.message);
+                sendResponse({ success: false, error: error.message });
+            });
+        return true;
     }
 
     if (message.type === 'chatMessageDetected') {
@@ -21,20 +24,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
 	async function handleSidePanelOpened() {
+		console.log('Background sidePanelOpened handleSidePanelOpened');
         try {
             const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
             if (tabs.length === 0) {
                 throw new Error("No active tab found.");
             }
 
-            tabId = tabs[0].id;
-            console.log('Background sidePanelOpened message received. Tab ID:', tabId);
+            originalTabId = tabs[0].id;
+            console.log('Background sidePanelOpened message received. Tab ID:', originalTabId);
 
-            if (!sidePanels[tabId]) {
-                sidePanels[tabId] = { isOpen: true };
-            }
-
-            await chrome.tabs.sendMessage(tabId, { type: 'activateObserver', tabId });
+            chrome.tabs.sendMessage(originalTabId, { type: 'activateObserver', tabId: originalTabId });
 
             console.log("Observer activated successfully");
             return { success: true };
@@ -42,5 +42,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             console.error('Error in handleSidePanelOpened:', error.message);
             return { success: false, error: error.message };
         }
+    }
+});
+
+// Listen for tab activation events
+chrome.tabs.onActivated.addListener((activeInfo) => {
+    console.log('Background Tab activated:', activeInfo);
+    const tabId = activeInfo.tabId;
+
+    // If there's an originalTabId and it differs from the current tabId
+    if (originalTabId && tabId !== originalTabId) {
+        // Notify the side panel about the tab change
+        chrome.runtime.sendMessage({ type: 'notOriginalTab' })
+    }
+});
+
+// Optionally, listen for when a tab is closed
+chrome.tabs.onRemoved.addListener((tabId) => {
+    console.log('Background Tab removed:', tabId);
+    if (tabId === originalTabId) {
+        originalTabId = null; // Clear originalTabId if the original tab is closed
     }
 });
