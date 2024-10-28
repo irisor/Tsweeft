@@ -4,25 +4,6 @@ let originalTabId = null;
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log('Background onMessage', message, sender);
 
-	if (message.type === 'sidePanelOpened') {
-        handleSidePanelOpened()
-            .then(() => {
-                console.log('Background sidePanelOpened after handleSidePanelOpened inside then');
-                sendResponse({ success: true });
-            })
-            .catch((error) => {
-                console.error('Error handling sidePanelOpened:', error.message);
-                sendResponse({ success: false, error: error.message });
-            });
-        return true;
-    }
-
-    // if (message.type === 'chatMessageDetected') {
-    //     console.log('Received chatMessageDetected:', message);
-    //     // Handle received chat message here, if applicable
-    //     sendResponse({ success: true });
-    // }
-
 	async function handleSidePanelOpened() {
 		console.log('Background sidePanelOpened handleSidePanelOpened');
         try {

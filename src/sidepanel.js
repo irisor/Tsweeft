@@ -35,7 +35,6 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         console.log('sidePanel onMessage', message, sender, sendResponse);
         if (message.type === 'chatMessageDetected') {
-            tabId = message.tabId;
             updatePartnerText(message.text);
             sendResponse({ success: true });
             return true;
@@ -49,16 +48,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     console.log('sidePanel before sendMessage sidePanelOpened');
-    // Send a message to the background script to activate the content script
 
-    chrome.runtime.sendMessage({ type: 'sidePanelOpened' }, (response) => {
-        if (chrome.runtime.lastError) {
-            console.error('Error in sending sidePanelOpened:', chrome.runtime.lastError.message);
-        } else if (response?.success) {
-            console.log('Side panel opened successfully.');
-        } else {
-            console.warn('No response received for sidePanelOpened message.');
+    // Send a message to the content script to open the side panel
+    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+        if (tabs.length === 0) {
+            console.error('No active tab found.');
+            return;
         }
+        tabId = tabs[0].id;
+        chrome.tabs.sendMessage(tabId, { type: 'sidePanelOpened' }, (response) => {
+            if (chrome.runtime.lastError) {
+                console.error('Error in sending sidePanelOpened:', chrome.runtime.lastError.message);
+            } else if (response?.success) {
+                console.log('Side panel opened successfully.');
+            } else {
+                console.warn('No response received for sidePanelOpened message.');
+            }
+        });
     });
 
     console.log('sidePanel before init');
@@ -66,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
     (async function init() {
         console.log('Initializing...');
         initDisplay();
+        initHistory();
         await initLanguages();
         try {
             await initTranslation();
@@ -80,6 +87,9 @@ document.addEventListener('DOMContentLoaded', () => {
         myTranslatedText.value = '';
         partnerText.value = '';
         translatedPartnerText.value = '';
+    }
+
+    function initHistory() {
         history = [];
         historyString = '';
     }
@@ -187,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Sidepanel history:', history, historyString);
 
         // Send message to content.js to inject text into chat
-        chrome.tabs.sendMessage(tabId, { type: 'injectTextIntoChat', text:translatedMyText }, (response) => {
+        chrome.tabs.sendMessage(tabId, { type: 'injectTextIntoChat', text: translatedMyText }, (response) => {
             if (chrome.runtime.lastError) {
                 console.error('Error injecting text into chat:', chrome.runtime.lastError.message);
             } else {

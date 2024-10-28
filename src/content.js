@@ -7,7 +7,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const outputMessage = document.querySelector('.chatbot-input');
     console.log('Content onMessage', message, sender);
 
-    if (message.type === 'activateObserver') {
+    if (message.type === 'sidePanelOpened') {
+        
         tabId = message.tabId;
         console.log('Activating observer on this tab.', tabId);
 
