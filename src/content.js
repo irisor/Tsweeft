@@ -24,11 +24,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             sendText(targetElement.innerText);
             // Observer setup
             if (inputMessage) {
-                const observer = new MutationObserver((mutations) => {
+                // const observer = new MutationObserver((mutations) => {
+                const observer = new MutationObserver(debounce((mutations) => {
                     if (mutations.some(m => m.type === 'childList' || m.type === 'characterData')) {
                         sendText(inputMessage.innerText);
                     }
-                });
+                }, 500));
 
                 observer.observe(inputMessage, { childList: true, subtree: true });
                 console.log('Observer initialized for inputMessage.');
@@ -61,7 +62,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
     }
 
-    if (message.action === 'injectTextIntoChat') {
+    if (message.type === 'injectTextIntoChat') {
         injectTextIntoChat(message.originalText, message.translatedText);
         sendResponse({ success: true });
     }
@@ -84,3 +85,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
     };
 });
+
+function debounce(func, time) {
+	let timeoutId;
+	return (...args) => {
+		clearTimeout(timeoutId);
+		timeoutId = setTimeout(() => {
+			func(...args);
+			timeoutId = null;
+		}, time);
+	};
+}

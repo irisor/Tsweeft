@@ -2,6 +2,8 @@ import './styles/index.scss';
 import { getAllLanguages, getDisplayName, getTargetLanguages } from './utils/languagePairUtils';
 import { handleMessage } from './utils/messageUtil';
 import { debounce } from './utils/timing';
+
+let history = [];
 let tabId = null
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -34,11 +36,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (message.type === 'chatMessageDetected') {
             tabId = message.tabId;
             updatePartnerText(message.text);
+            sendResponse({ success: true });
+            return true;
         }
 
         if (message.type === 'notOriginalTab') {
             handleMessage('The translator works only in the original tab', 'error');
         }
+
+        return true
     });
 
     console.log('sidePanel before sendMessage sidePanelOpened');
@@ -159,19 +165,37 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     }, 500));
 
-    // Send translation
+    // Send translation and save state to history
     sendButton?.addEventListener('click', async () => {
         const originalText = document.getElementById('my-text')?.value || '';
         const translatedText = document.getElementById('my-translated-text')?.value || '';
 
+        // Save current state to history
+        const history = {
+            partnerText: document.getElementById('partner-text')?.value || '',
+            translatedPartnerText: document.getElementById('translated-partner-text')?.value || '',
+            myText: originalText,
+            translatedMyText: translatedText
+        };
+        console.log('Current state saved to history:', history);
+
         // Send message to content.js to inject text into chat
-        chrome.tabs.sendMessage(tabId, { action: 'injectTextIntoChat', originalText, translatedText }, (response) => {
+        chrome.tabs.sendMessage(tabId, { type: 'injectTextIntoChat', originalText, translatedText }, (response) => {
             if (chrome.runtime.lastError) {
                 console.error('Error injecting text into chat:', chrome.runtime.lastError.message);
             } else {
+                initDisplay();
                 console.log('Text injected into chat:', response);
             }
         });
+    });
+
+    // Trigger sendButton click on Enter key press in sidePanel
+    myText.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault(); // Prevent newline in textarea
+            sendButton.click();
+        }
     });
 
     // Populate the source language select

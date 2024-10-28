@@ -17,11 +17,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 
-    if (message.type === 'chatMessageDetected') {
-        console.log('Received chatMessageDetected:', message);
-        // Handle received chat message here, if applicable
-        sendResponse({ success: true });
-    }
+    // if (message.type === 'chatMessageDetected') {
+    //     console.log('Received chatMessageDetected:', message);
+    //     // Handle received chat message here, if applicable
+    //     sendResponse({ success: true });
+    // }
 
 	async function handleSidePanelOpened() {
 		console.log('Background sidePanelOpened handleSidePanelOpened');
