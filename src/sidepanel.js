@@ -44,6 +44,10 @@ document.addEventListener('DOMContentLoaded', () => {
             handleMessage('The translator works only in the original tab', 'error');
         }
 
+        if (message.type === "closeSidePanel") {
+            window.close();
+        }
+
         return true
     });
 
@@ -69,7 +73,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     console.log('sidePanel before init');
 
-    (async function init() {
+    init();
+
+    async function init() {
         console.log('Initializing...');
         initDisplay();
         initHistory();
@@ -80,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
             handleMessage('Failed to setup translation', 'error');
             console.log('Failed to setup translation', error);
         }
-    })();
+    };
 
     function initDisplay() {
         myText.value = '';

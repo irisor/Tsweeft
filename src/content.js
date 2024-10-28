@@ -14,6 +14,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         observerElement(inputMessage);
         sendResponse({ success: true });
+        
         return true;
         function observerElement(targetElement) {
             console.log('Content.js observerElement', targetElement);
@@ -36,7 +37,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 console.log('Observer initialized for inputMessage.');
 
                 // Clean up observer on unload
-                window.addEventListener('beforeunload', () => observer.disconnect());
+                window.addEventListener('beforeunload', () => {
+                    if (observer) observer.disconnect();
+                    chrome.runtime.sendMessage({ type: 'closeSidePanel' });
+                });
             } else {
                 console.warn('No input message found to observe.');
             }
