@@ -4,6 +4,7 @@ import { handleMessage } from './utils/messageUtil';
 import { debounce } from './utils/timing';
 
 let history = [];
+let historyString = '';
 let tabId = null
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -79,6 +80,8 @@ document.addEventListener('DOMContentLoaded', () => {
         myTranslatedText.value = '';
         partnerText.value = '';
         translatedPartnerText.value = '';
+        history = [];
+        historyString = '';
     }
 
     async function initTranslation() {
@@ -146,7 +149,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Update partner text and translated partner text
-    function updatePartnerText(newText) {
+    function updatePartnerText(text) {
+        const newText = text.replace(historyString, '');
         partnerText.value = newText;
 
         debounce(() => {
@@ -167,20 +171,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Send translation and save state to history
     sendButton?.addEventListener('click', async () => {
-        const originalText = document.getElementById('my-text')?.value || '';
-        const translatedText = document.getElementById('my-translated-text')?.value || '';
+        const myText = document.getElementById('my-text')?.value || '';
+        const translatedMyText = document.getElementById('my-translated-text')?.value || '';
+        const partnerText = document.getElementById('partner-text')?.value || '';
+        const translatedPartnerText = document.getElementById('translated-partner-text')?.value || '';
 
         // Save current state to history
-        const history = {
-            partnerText: document.getElementById('partner-text')?.value || '',
-            translatedPartnerText: document.getElementById('translated-partner-text')?.value || '',
-            myText: originalText,
-            translatedMyText: translatedText
-        };
-        console.log('Current state saved to history:', history);
+        history.push({
+            partnerText: partnerText,
+            translatedPartnerText: translatedPartnerText,
+            myText: myText,
+            translatedMyText: translatedMyText
+        });
+        historyString += partnerText + '\n' + translatedMyText;
+        console.log('Sidepanel history:', history, historyString);
 
         // Send message to content.js to inject text into chat
-        chrome.tabs.sendMessage(tabId, { type: 'injectTextIntoChat', originalText, translatedText }, (response) => {
+        chrome.tabs.sendMessage(tabId, { type: 'injectTextIntoChat', text:translatedMyText }, (response) => {
             if (chrome.runtime.lastError) {
                 console.error('Error injecting text into chat:', chrome.runtime.lastError.message);
             } else {

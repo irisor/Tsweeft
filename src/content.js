@@ -63,7 +63,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     if (message.type === 'injectTextIntoChat') {
-        injectTextIntoChat(message.originalText, message.translatedText);
+        injectTextIntoChat(message.text);
         sendResponse({ success: true });
     }
 
@@ -76,7 +76,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // }
     }
 
-    function injectTextIntoChat(originalText, translatedText) {
+    function injectTextIntoChat(translatedText) {
         const targetElement = outputMessage;
         if (targetElement) {
             targetElement.value = translatedText;
