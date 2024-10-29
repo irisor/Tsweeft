@@ -5,6 +5,7 @@ let tabId = null;
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const inputMessage = document.querySelector('.chatbot-messages');
     const outputMessage = document.querySelector('.chatbot-input');
+    let observer = null;
     console.log('Content onMessage', message, sender);
 
     if (message.type === 'sidePanelOpened') {
@@ -27,7 +28,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             // Observer setup
             if (inputMessage) {
                 // const observer = new MutationObserver((mutations) => {
-                const observer = new MutationObserver(debounce((mutations) => {
+                observer = new MutationObserver(debounce((mutations) => {
                     if (mutations.some(m => m.type === 'childList' || m.type === 'characterData')) {
                         sendText(inputMessage.innerText);
                     }

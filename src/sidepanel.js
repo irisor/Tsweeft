@@ -40,10 +40,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return true;
         }
 
-        if (message.type === 'notOriginalTab') {
-            handleMessage('The translator works only in the original tab', 'error');
-        }
-
         if (message.type === "closeSidePanel") {
             window.close();
         }
