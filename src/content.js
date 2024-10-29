@@ -38,8 +38,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
                 // Clean up observer on unload
                 window.addEventListener('beforeunload', () => {
-                    if (observer) observer.disconnect();
-                    chrome.runtime.sendMessage({ type: 'closeSidePanel' });
+                    console.log('content before unload, observer=', observer);
+
+                    if (observer && observer.observing) {
+                        observer.disconnect();
+                        chrome.runtime.sendMessage({ type: 'closeSidePanel' });
+                    }
                 });
             } else {
                 console.warn('No input message found to observe.');
@@ -60,7 +64,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     if (chrome.runtime.lastError) {
                         console.error('Error in sending chatMessageDetected:', chrome.runtime.lastError.message);
                     } else {
-                        console.log('Message sent successfully:', response);
+                        console.log('chatMessageDetected Message sent successfully:', response);
                     }
                 });
             }
@@ -75,10 +79,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'sidePanelClosed') {
         console.log('content sidePanelClosed', message);
 
-        // // Clean up the observer when the side panel is closed
-        // if (observer) {
-        //     observer.disconnect();
-        // }
+        // Clean up the observer when the side panel is closed
+        if (observer) {
+            observer.disconnect();
+        }
     }
 
     function injectTextIntoChat(translatedText) {

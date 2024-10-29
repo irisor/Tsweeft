@@ -71,6 +71,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    window.addEventListener('beforeunload', () => {
+        chrome.tabs.sendMessage(tabId, { type: 'sidePanelClosed' });
+    });
+
     console.log('sidePanel before init');
 
     init();
@@ -181,6 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
     myText.addEventListener('input', debounce(() => {
         translateText(myText.value, myToPartnerTranslator)
             .then(translated => {
+                console.log('Sidepanel translated my text:', translated);
                 myTranslatedText.value = translated;
             });
     }, 500));
@@ -188,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Send translation and save state to history
     sendButton?.addEventListener('click', async () => {
         const myText = document.getElementById('my-text')?.value || '';
-        const translatedMyText = document.getElementById('my-translated-text')?.value || '';
+        let translatedMyText = document.getElementById('my-translated-text')?.value || '';
         const partnerText = document.getElementById('partner-text')?.value || '';
         const translatedPartnerText = document.getElementById('translated-partner-text')?.value || '';
 
@@ -202,15 +207,21 @@ document.addEventListener('DOMContentLoaded', () => {
         historyString += partnerText + '\n' + translatedMyText;
         console.log('Sidepanel history:', history, historyString);
 
-        // Send message to content.js to inject text into chat
-        chrome.tabs.sendMessage(tabId, { type: 'injectTextIntoChat', text: translatedMyText }, (response) => {
-            if (chrome.runtime.lastError) {
-                console.error('Error injecting text into chat:', chrome.runtime.lastError.message);
-            } else {
-                initDisplay();
-                console.log('Text injected into chat:', response);
+        // Send message to content.js to inject text into chat, wait is needed to make sure that all the tetxt was translated
+        setTimeout(() => {
+            translatedMyText = document.getElementById('my-translated-text')?.value || '';
+            if (translatedMyText) {
+                console.log('Sidepanel before sendMessage injectTextIntoChat, text=', translatedMyText);
+                chrome.tabs.sendMessage(tabId, { type: 'injectTextIntoChat', text: translatedMyText }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        console.error('Error injecting text into chat:', chrome.runtime.lastError.message);
+                    } else {
+                        initDisplay();
+                        console.log('Text injected into chat:', response);
+                    }
+                });
             }
-        });
+        }, 500);
     });
 
     // Trigger sendButton click on Enter key press in sidePanel
