@@ -6,6 +6,7 @@ import { debounce } from './utils/timing';
 let history = [];
 let historyString = '';
 let tabId = null
+const loadingOverlay = document.getElementById('loading-overlay');
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Side panel loaded.');
@@ -117,21 +118,19 @@ document.addEventListener('DOMContentLoaded', () => {
             sourceLanguage: fromLang,
             targetLanguage: toLang,
         };
-
         const canTranslate = await translation.canTranslate(languagePair);
+
         if (canTranslate !== 'no') {
-            if (canTranslate === 'readily') {
-                return await translation.createTranslator(languagePair);
-            } else {
-                handleMessage('Translation needs to be downloaded', 'warning');
-                console.log('Translation needs to be downloaded', canTranslate);
+            try {
                 const translator = await translation.createTranslator(languagePair);
-                translator.addEventListener('downloadprogress', (e) => {
-                    console.log(e.loaded, e.total);
-                });
-                await translator.ready;
+                console.log('Sidepanel setting translation for target language', toLang);
                 return translator;
+            } catch (ev) {
+                handleMessage('Error setting translation', 'error');
+                console.log('Error setting translation', ev);
+                return null
             }
+
         } else {
             handleMessage('No translation available for this language pair', 'error');
             console.log('No translation available');
@@ -158,9 +157,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return '';
         }
         const translatedText = await translator.translate(text);
-        //   const readableStreamOfText = await translator.translateStreaming(`
-        //     Four score and seven years ago our fathers brought forth, upon this...
-        //   `);
         return translatedText;
     }
 
@@ -251,16 +247,64 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Change languages after languages update
+    // setLangsBtn.addEventListener('click', async () => {
+    //     selectedLanguages = {
+    //         partner: { code: partnerLangSelect.value, displayName: partnerLangSelect?.selectedOptions[0]?.textContent },
+    //         my: { code: myLangSelect.value, displayName: myLangSelect?.selectedOptions[0]?.textContent }
+    //     };
+    //     await initTranslation();
+    //     await chrome.storage.local.set({ selectedLanguages });
+    //     handleMessage(`Language pair updated to ${selectedLanguages.partner.displayName} to ${selectedLanguages.my.displayName}`, 'success');
+
+    //     // Update partner text and translated partner text
+    //     updatePartnerText(partnerText.value);
+    //     const event = new Event('input');
+    //     myText.dispatchEvent(event);
+
+    // });
+
+
     setLangsBtn.addEventListener('click', async () => {
+        // Show overlay and disable inputs
+        loadingOverlay.classList.remove('hidden');
+        disableInputs(true);
+
         selectedLanguages = {
             partner: { code: partnerLangSelect.value, displayName: partnerLangSelect?.selectedOptions[0]?.textContent },
             my: { code: myLangSelect.value, displayName: myLangSelect?.selectedOptions[0]?.textContent }
         };
-        initTranslation();
-        await chrome.storage.local.set({ selectedLanguages });
-        handleMessage(`Language pair updated to ${selectedLanguages.partner.displayName} to ${selectedLanguages.my.displayName}`, 'success');
-        const event = new Event('input');
-        myText.dispatchEvent(event);
 
+        // Initialize translation
+        try {
+            await initTranslation();
+            await chrome.storage.local.set({ selectedLanguages });
+
+            // Update partner text and translated partner text
+            updatePartnerText(partnerText.value);
+            const event = new Event('input');
+            translateText(myText.value, myToPartnerTranslator)
+                .then(translated => {
+                    console.log('Sidepanel translated my text:', translated);
+                    myTranslatedText.value = translated;
+                });
+
+            handleMessage(`Language pair updated to ${selectedLanguages.partner.displayName} to ${selectedLanguages.my.displayName}`, 'success');
+        } catch (error) {
+            handleMessage('Error updating languages', 'error');
+            console.error('Error updating languages:', error);
+        }
+
+        // Hide overlay and re-enable inputs
+        loadingOverlay.classList.add('hidden');
+        disableInputs(false);
     });
+
+    const disableInputs = (state) => {
+        partnerLangSelect.disabled = state;
+        myLangSelect.disabled = state;
+        setLangsBtn.disabled = state;
+        partnerText.disabled = state;
+        myText.disabled = state;
+    };
+
 });

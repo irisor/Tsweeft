@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chat Translator</title>
   <link rel="stylesheet" href="../dist/styles.css">
 </head>
+
 <body>
-  <div class="sidepanel-container">
+  <section class="sidepanel-container">
     <h1>Tsweeft Chat Translator</h1>
     <!-- Language Selection -->
     <section class="language-selection">
@@ -37,7 +39,13 @@
     <textarea id="my-translated-text" class="language-text" rows="5"></textarea>
     <!-- Send Button -->
     <button id="send-btn" class="btn">Send</button>
-  </div>
+    <!-- Overlay for loading -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+      <div class="spinner"></div>
+    </div>
+  </section>
+
   <script src="../dist/sidepanel.js" type="module"></script>
 </body>
+
 </html>
