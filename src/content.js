@@ -6,6 +6,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const inputMessage = document.querySelector('.chatbot-messages');
     const outputMessage = document.querySelector('.chatbot-input');
     let observer = null;
+    let isObserving = false;
+
     console.log('Content onMessage', message, sender);
 
     if (message.type === 'sidePanelOpened') {
@@ -35,14 +37,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 }, 500));
 
                 observer.observe(inputMessage, { childList: true, subtree: true });
+                isObserving = true;
                 console.log('Observer initialized for inputMessage.');
 
                 // Clean up observer on unload
                 window.addEventListener('beforeunload', () => {
-                    console.log('content before unload, observer=', observer);
-
-                    if (observer && observer.observing) {
+                    console.log('content before unload, observer=', observer, isObserving);
+                    
+                    if (observer && isObserving) {
                         observer.disconnect();
+                        isObserving = false;
                         chrome.runtime.sendMessage({ type: 'closeSidePanel' });
                     }
                 });
@@ -83,6 +87,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // Clean up the observer when the side panel is closed
         if (observer) {
             observer.disconnect();
+            isObserving = false;
         }
     }
 
