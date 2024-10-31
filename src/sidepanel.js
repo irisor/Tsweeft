@@ -1,310 +1,311 @@
-import './styles/index.scss';
-import { getAllLanguages, getDisplayName, getTargetLanguages } from './utils/languagePairUtils';
-import { handleMessage } from './utils/messageUtil';
-import { debounce } from './utils/timing';
+import { getAllLanguages, getDisplayName, getTargetLanguages } from "./utils/languagePairUtils";
+import { TranslationService } from "./services/translation.service";
+import { debounce } from "./utils/timing";
+import { handleMessage } from "./utils/messageUtil";
 
-let history = [];
-let historyString = '';
-let tabId = null
-const loadingOverlay = document.getElementById('loading-overlay');
+const SidePanel = {
+    elements: null,
+    state: null,
 
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('Side panel loaded.');
-    const partnerLangSelect = document.getElementById('partner-lang');
-    const myLangSelect = document.getElementById('my-lang');
-    const setLangsBtn = document.getElementById('set-langs-btn');
-    const partnerText = document.getElementById('partner-text');
-    const translatedPartnerText = document.getElementById('translated-partner-text');
-    const myText = document.getElementById('my-text');
-    const myTranslatedText = document.getElementById('my-translated-text');
-    const sendButton = document.getElementById('send-btn');
-    let myToPartnerTranslator = null;
-    let partnerToMyTranslator = null;
-    const browserLanguage = navigator.language.split('-')[0];
-    let selectedLanguages = {
-        partner: {
-            code: 'es',
-            displayName: 'Spanish'
-        },
-        my: {
-            code: browserLanguage,
-            displayName: getDisplayName(browserLanguage) || browserLanguage
-        }
-    };
+    getElements() {
+        return {
+            loadingOverlay: document.getElementById('loading-overlay'),
+            partnerLangSelect: document.getElementById('partner-lang'),
+            myLangSelect: document.getElementById('my-lang'),
+            setLangsBtn: document.getElementById('set-langs-btn'),
+            partnerText: document.getElementById('partner-text'),
+            translatedPartnerText: document.getElementById('translated-partner-text'),
+            myText: document.getElementById('my-text'),
+            myTranslatedText: document.getElementById('my-translated-text'),
+            sendButton: document.getElementById('send-btn')
+        };
+    },
 
-    // Listen for messages from the content script (chat detection)
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-        console.log('sidePanel onMessage', message, sender, sendResponse);
-        if (message.type === 'chatMessageDetected') {
-            updatePartnerText(message.text);
-            sendResponse({ success: true });
-            return true;
-        }
+    initState() {
+        const browserLanguage = navigator.language.split('-')[0];
+        return {
+            history: [],
+            historyString: '',
+            tabId: null,
+            selectedLanguages: {
+                partner: {
+                    code: 'es',
+                    displayName: 'Spanish'
+                },
+                my: {
+                    code: browserLanguage,
+                    displayName: getDisplayName(browserLanguage) || browserLanguage
+                }
+            }
+        };
+    },
 
-        if (message.type === "closeSidePanel") {
-            window.close();
-        }
+    initDisplay() {
+        this.elements.myText.value = '';
+        this.elements.myTranslatedText.value = '';
+        this.elements.partnerText.value = '';
+        this.elements.translatedPartnerText.value = '';
+    },
 
-        return true
-    });
+    initHistory() {
+        this.state.history = [];
+        this.state.historyString = '';
+    },
 
-    console.log('sidePanel before sendMessage sidePanelOpened');
-
-    // Send a message to the content script to open the side panel
-    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+    async initializeTab() {
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
         if (tabs.length === 0) {
             console.error('No active tab found.');
             return;
         }
-        tabId = tabs[0].id;
-        chrome.tabs.sendMessage(tabId, { type: 'sidePanelOpened' }, (response) => {
-            if (chrome.runtime.lastError) {
-                console.error('Error in sending sidePanelOpened:', chrome.runtime.lastError.message);
-            } else if (response?.success) {
-                console.log('Side panel opened successfully.');
-            } else {
-                console.warn('No response received for sidePanelOpened message.');
-            }
-        });
-    });
 
-    window.addEventListener('beforeunload', () => {
-        chrome.tabs.sendMessage(tabId, { type: 'sidePanelClosed' });
-    });
+        this.state.tabId = tabs[0].id;
+        console.log('Sidepanel tab initialized with Tab ID:', this.state.tabId);
 
-    console.log('sidePanel before init');
+        // Set up message listeners before sending initialization message
+        this.setupMessageListeners();
 
-    init();
-
-    async function init() {
-        console.log('Initializing...');
-        initDisplay();
-        initHistory();
-        await initLanguages();
         try {
-            await initTranslation();
-        } catch (error) {
-            handleMessage('Failed to setup translation', 'error');
-            console.log('Failed to setup translation', error);
-        }
-    };
-
-    function initDisplay() {
-        myText.value = '';
-        myTranslatedText.value = '';
-        partnerText.value = '';
-        translatedPartnerText.value = '';
-    }
-
-    function initHistory() {
-        history = [];
-        historyString = '';
-    }
-
-    async function initTranslation() {
-        let myToPartner, partnerToMy;
-        try {
-            myToPartner = await setupTranslation(selectedLanguages.my.code, selectedLanguages.partner.code);
-            if (myToPartner) partnerToMy = await setupTranslation(selectedLanguages.partner.code, selectedLanguages.my.code);
-            myToPartnerTranslator = myToPartner;
-            partnerToMyTranslator = partnerToMy;
-        } catch (error) {
-            return Promise.reject(error);
-        }
-    };
-
-    async function setupTranslation(fromLang, toLang) {
-        const languagePair = {
-            sourceLanguage: fromLang,
-            targetLanguage: toLang,
-        };
-        const canTranslate = await translation.canTranslate(languagePair);
-
-        if (canTranslate !== 'no') {
-            try {
-                const translator = await translation.createTranslator(languagePair);
-                console.log('Sidepanel setting translation for target language', toLang);
-                return translator;
-            } catch (ev) {
-                handleMessage('Error setting translation', 'error');
-                console.log('Error setting translation', ev);
-                return null
-            }
-
-        } else {
-            handleMessage('No translation available for this language pair', 'error');
-            console.log('No translation available');
-            return null
-        }
-    };
-
-    async function initLanguages() {
-        const result = await new Promise(resolve => {
-            chrome.storage.local.get('selectedLanguages', resolve);
-        });
-
-        if (result.selectedLanguages) {
-            selectedLanguages = result.selectedLanguages;
-        }
-
-        handleMyLangChange(selectedLanguages.my.code);
-        partnerLangSelect.value = selectedLanguages.partner.code;
-        myLangSelect.value = selectedLanguages.my.code;
-    }
-
-    async function translateText(text, translator) {
-        if (!translator) {
-            return '';
-        }
-        const translatedText = await translator.translate(text);
-        return translatedText;
-    }
-
-    // Update partner text and translated partner text
-    function updatePartnerText(text) {
-        const newText = text.replace(historyString, '');
-        partnerText.value = newText;
-
-        debounce(() => {
-            translateText(newText, partnerToMyTranslator)
-                .then(translated => {
-                    translatedPartnerText.value = translated;
-                });
-        }, 500)();
-    }
-
-    // Translate my text
-    myText.addEventListener('input', debounce(() => {
-        translateText(myText.value, myToPartnerTranslator)
-            .then(translated => {
-                console.log('Sidepanel translated my text:', translated);
-                myTranslatedText.value = translated;
+            const response = await chrome.tabs.sendMessage(this.state.tabId, {
+                type: 'sidePanelOpened',
+                tabId: this.state.tabId
             });
-    }, 500));
 
-    // Send translation and save state to history
-    sendButton?.addEventListener('click', async () => {
-        const myText = document.getElementById('my-text')?.value || '';
-        let translatedMyText = document.getElementById('my-translated-text')?.value || '';
-        const partnerText = document.getElementById('partner-text')?.value || '';
-        const translatedPartnerText = document.getElementById('translated-partner-text')?.value || '';
-
-        // Save current state to history
-        history.push({
-            partnerText: partnerText,
-            translatedPartnerText: translatedPartnerText,
-            myText: myText,
-            translatedMyText: translatedMyText
-        });
-        historyString += partnerText + '\n' + translatedMyText;
-        console.log('Sidepanel history:', history, historyString);
-
-        // Send message to content.js to inject text into chat, wait is needed to make sure that all the tetxt was translated
-        setTimeout(() => {
-            translatedMyText = document.getElementById('my-translated-text')?.value || '';
-            if (translatedMyText) {
-                console.log('Sidepanel before sendMessage injectTextIntoChat, text=', translatedMyText);
-                chrome.tabs.sendMessage(tabId, { type: 'injectTextIntoChat', text: translatedMyText }, (response) => {
-                    if (chrome.runtime.lastError) {
-                        console.error('Error injecting text into chat:', chrome.runtime.lastError.message);
-                    } else {
-                        initDisplay();
-                        console.log('Text injected into chat:', response);
-                    }
-                });
+            console.log('sidePanelOpened response:', response);
+            if (!response || !response.success) {
+                console.error('Failed to initialize content script');
+                handleMessage('Failed to initialize content script', 'error');
             }
-        }, 500);
-    });
-
-    // Trigger sendButton click on Enter key press in sidePanel
-    myText.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
-            event.preventDefault(); // Prevent newline in textarea
-            sendButton.click();
+        } catch (error) {
+            console.error('Error in sending sidePanelOpened:', error);
+            handleMessage('Failed to initialize content script', 'error');
         }
-    });
+    },
 
-    // Populate the source language select
-    getAllLanguages().forEach(lang => {
-        const option = new Option(lang.displayName, lang.code);
-        myLangSelect.add(option);
-    });
+    async initLanguages() {
+        const result = await chrome.storage.local.get('selectedLanguages');
+        if (result.selectedLanguages) {
+            this.state.selectedLanguages = result.selectedLanguages;
+        }
 
-    // Update the target language select when source language changes
-    myLangSelect.addEventListener('change', (event) => {
-        handleMyLangChange(event.target.value);
-    });
+        this.handleMyLangChange(this.state.selectedLanguages.my.code);
+        this.elements.partnerLangSelect.value = this.state.selectedLanguages.partner.code;
+        this.elements.myLangSelect.value = this.state.selectedLanguages.my.code;
+    },
 
-    function handleMyLangChange(value) {
-        const selectedSourceLang = value;
-
-        partnerLangSelect.value = ''; // Clear existing options
-
-        getTargetLanguages(selectedSourceLang).forEach(lang => {
+    handleMyLangChange(value) {
+        this.elements.partnerLangSelect.value = '';
+        this.elements.partnerLangSelect.innerHTML = '';
+        getTargetLanguages(value).forEach(lang => {
             const option = new Option(lang.displayName, lang.code);
-            partnerLangSelect.add(option);
+            this.elements.partnerLangSelect.add(option);
         });
-    };
+    },
 
-    // Change languages after languages update
-    // setLangsBtn.addEventListener('click', async () => {
-    //     selectedLanguages = {
-    //         partner: { code: partnerLangSelect.value, displayName: partnerLangSelect?.selectedOptions[0]?.textContent },
-    //         my: { code: myLangSelect.value, displayName: myLangSelect?.selectedOptions[0]?.textContent }
-    //     };
-    //     await initTranslation();
-    //     await chrome.storage.local.set({ selectedLanguages });
-    //     handleMessage(`Language pair updated to ${selectedLanguages.partner.displayName} to ${selectedLanguages.my.displayName}`, 'success');
+    updatePartnerText(text) {
+        const newText = text.replace(this.state.historyString, '');
+        this.elements.partnerText.value = newText;
 
-    //     // Update partner text and translated partner text
-    //     updatePartnerText(partnerText.value);
-    //     const event = new Event('input');
-    //     myText.dispatchEvent(event);
+        debounce(async () => {
+            const translated = await TranslationService.translateText(newText, true);
+            this.elements.translatedPartnerText.value = translated;
+        }, 500)();
+    },
 
-    // });
+    async handleLanguageUpdate() {
+        this.elements.loadingOverlay.classList.remove('hidden');
+        this.disableInputs(true);
 
-
-    setLangsBtn.addEventListener('click', async () => {
-        // Show overlay and disable inputs
-        loadingOverlay.classList.remove('hidden');
-        disableInputs(true);
-
-        selectedLanguages = {
-            partner: { code: partnerLangSelect.value, displayName: partnerLangSelect?.selectedOptions[0]?.textContent },
-            my: { code: myLangSelect.value, displayName: myLangSelect?.selectedOptions[0]?.textContent }
-        };
-
-        // Initialize translation
         try {
-            await initTranslation();
-            await chrome.storage.local.set({ selectedLanguages });
+            this.state.selectedLanguages = {
+                partner: {
+                    code: this.elements.partnerLangSelect.value,
+                    displayName: this.elements.partnerLangSelect?.selectedOptions[0]?.textContent
+                },
+                my: {
+                    code: this.elements.myLangSelect.value,
+                    displayName: this.elements.myLangSelect?.selectedOptions[0]?.textContent
+                }
+            };
 
-            // Update partner text and translated partner text
-            updatePartnerText(partnerText.value);
-            const event = new Event('input');
-            translateText(myText.value, myToPartnerTranslator)
-                .then(translated => {
-                    console.log('Sidepanel translated my text:', translated);
-                    myTranslatedText.value = translated;
-                });
+            await TranslationService.initTranslation(this.state.selectedLanguages);
+            await chrome.storage.local.set({ selectedLanguages: this.state.selectedLanguages });
 
-            handleMessage(`Language pair updated to ${selectedLanguages.partner.displayName} to ${selectedLanguages.my.displayName}`, 'success');
+            this.updatePartnerText(this.elements.partnerText.value);
+            const translated = await TranslationService.translateText(this.elements.myText.value, false);
+            this.elements.myTranslatedText.value = translated;
+
+            handleMessage(
+                `Language pair updated to ${this.state.selectedLanguages.partner.displayName} to ${this.state.selectedLanguages.my.displayName}`,
+                'success'
+            );
         } catch (error) {
             handleMessage('Error updating languages', 'error');
             console.error('Error updating languages:', error);
+        } finally {
+            this.elements.loadingOverlay.classList.add('hidden');
+            this.disableInputs(false);
+        }
+    },
+
+    disableInputs(disabled) {
+        Object.values(this.elements).forEach(element => {
+            if (element && typeof element.disabled !== 'undefined') {
+                element.disabled = disabled;
+            }
+        });
+    },
+
+    setupMessageListeners() {
+        // Remove any existing listeners first
+        if (chrome.runtime.onMessage.hasListeners()) {
+            chrome.runtime.onMessage.removeListener(this.messageHandler);
         }
 
-        // Hide overlay and re-enable inputs
-        loadingOverlay.classList.add('hidden');
-        disableInputs(false);
-    });
+        // Bind the message handler to preserve 'this' context
+        this.messageHandler = this.handleRuntimeMessage.bind(this);
+        chrome.runtime.onMessage.addListener(this.messageHandler);
 
-    const disableInputs = (state) => {
-        partnerLangSelect.disabled = state;
-        myLangSelect.disabled = state;
-        setLangsBtn.disabled = state;
-        partnerText.disabled = state;
-        myText.disabled = state;
-    };
+        console.log('Side panel message listeners initialized');
+    },
 
+    handleRuntimeMessage(message, sender, sendResponse) {
+        console.log('Sidepanel received message:', message);
+
+        switch (message.type) {
+            case 'contentScriptReady':
+                console.log('Content script ready confirmation received');
+                sendResponse({ success: true });
+                break;
+
+            case 'chatMessageDetected':
+                console.log('Received chat message:', message.text.substring(0, 50) + '...');
+                this.updatePartnerText(message.text);
+                sendResponse({ success: true });
+                break;
+
+            case 'closeSidePanel':
+                console.log('Closing side panel');
+                window.close();
+                break;
+        }
+
+        return true; // Keep channel open for async response
+    },
+
+    setupEventListeners() {
+        // UI event listeners
+        window.addEventListener('beforeunload', async () => {
+            console.log('Sidepanel Sending sidePanelClosed message to tab:', this.state.tabId);
+            if (this.state.tabId) {
+                try {
+                    await chrome.tabs.sendMessage(this.state.tabId, {
+                        type: 'sidePanelClosed'
+                    });
+                    console.log('Successfully sent sidePanelClosed message');
+                } catch (error) {
+                    console.error('Error sending sidePanelClosed:', error);
+                }
+            }
+        });
+
+        this.elements.myText.addEventListener('input', debounce(async () => {
+            console.log('Sidepanel Translating my text:', this.elements.myText.value);
+            const translated = await TranslationService.translateText(this.elements.myText.value, false);
+            console.log('Sidepanel Translated my text:', translated);
+            this.elements.myTranslatedText.value = translated;
+        }, 500));
+
+        this.elements.sendButton?.addEventListener('click', () => {
+            console.log('Sending message');
+            this.handleSend();
+        });
+
+        this.elements.myText.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                this.elements.sendButton.click();
+            }
+        });
+
+        this.elements.myLangSelect.addEventListener('change', (event) => {
+            console.log('Sidepanel My language changed to:', event.target.value);
+            this.handleMyLangChange(event.target.value);
+        });
+
+        this.elements.setLangsBtn.addEventListener('click', () => {
+            console.log('Sidepanel Updating languages');
+            this.handleLanguageUpdate();
+        });
+
+        // Populate source language select
+        getAllLanguages().forEach(lang => {
+            const option = new Option(lang.displayName, lang.code);
+            this.elements.myLangSelect.add(option);
+        });
+    },
+
+    async handleSend() {
+        console.log('Sidepanel Sending message to content script');
+        const myTextValue = this.elements.myText.value;
+        const translatedMyText = this.elements.myTranslatedText.value;
+        const partnerTextValue = this.elements.partnerText.value;
+        const translatedPartnerText = this.elements.translatedPartnerText.value;
+
+        // Save to history
+        this.state.history.push({
+            partnerText: partnerTextValue,
+            translatedPartnerText: translatedPartnerText,
+            myText: myTextValue,
+            translatedMyText: translatedMyText
+        });
+
+        this.state.historyString += partnerTextValue + '\n' + translatedMyText;
+
+        // Send message to content script
+        setTimeout(() => {
+            console.log('Sidepanel Injecting text into chat:', this.elements.myTranslatedText.value);
+            const finalTranslatedText = this.elements.myTranslatedText.value;
+            if (finalTranslatedText) {
+                chrome.tabs.sendMessage(this.state.tabId, {
+                    type: 'injectTextIntoChat',
+                    text: finalTranslatedText
+                }).then(() => {
+                    console.log('Text injected successfully');
+                    this.initDisplay();
+                }).catch(error => {
+                    console.error('Error injecting text into chat:', error);
+                });
+            }
+        }, 500);
+    },
+
+    async init() {
+        console.log('Sidepanel Initializing...');
+        this.elements = this.getElements();
+        console.log('Sidepanel Elements:', this.elements);
+        this.state = this.initState();
+        console.log('Sidepanel State:', this.state);
+        this.initDisplay();
+        console.log('Sidepanel Display initialized');
+        this.initHistory();
+        console.log('Sidepanel History initialized');
+
+        // Initialize tab and message listeners first
+        await this.initializeTab();
+        console.log('Sidepanel Tab initialized');
+
+        // Then initialize the rest
+        await this.initLanguages();
+        console.log('Sidepanel Languages initialized');
+        await TranslationService.initTranslation(this.state.selectedLanguages);
+        console.log('Sidepanel Translation initialized');
+        this.setupEventListeners();
+        console.log('Sidepanel initialization complete');
+    }
+};
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    SidePanel.init();
 });
