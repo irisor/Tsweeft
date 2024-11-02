@@ -1,7 +1,7 @@
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import terser from "@rollup/plugin-terser";
-import scss from 'rollup-plugin-scss';
+import sass from 'rollup-plugin-sass'
 
 export default {
   input: {
@@ -18,11 +18,10 @@ export default {
     resolve(),                        // Resolves modules from node_modules
     commonjs(),                       // Converts CommonJS modules to ES6
     terser(),                         // Minifies the code
-    scss({
-      output: 'dist/',
-      fileName: 'styles.css',
-      sourceMap: true,
-      watch: 'src/styles/',
+    sass({
+      output: 'dist/styles.css',     // Specifies the output CSS file
+      options: { sourceMap: true },  // Disables source maps (optional)
+      outputStyle: 'compressed',      // Minifies CSS output
     }),
   ],
 };
