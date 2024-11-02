@@ -1,27 +1,28 @@
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
-import { terser } from "rollup-plugin-terser";
+import terser from "@rollup/plugin-terser";
 import scss from 'rollup-plugin-scss';
 
 export default {
   input: {
     sidepanel: 'src/sidepanel.js',    // Entry point for sidepanel logic
-    background: 'src/background.js',  // Entry point for background service worker
+    // background: 'src/background.js',  // Entry point for background service worker
     content: 'src/content.js'         // Entry point for content script
   },
   output: {
     dir: 'dist',                      // Output directory for bundled files
     format: 'esm',                    // Use ES module format
-    assetFileNames: '[name][extname]' // Removes the hash from the asset filename
+    // assetFileNames: '[name][extname]' // Removes the hash from the asset filename
   },
   plugins: [
     resolve(),                        // Resolves modules from node_modules
     commonjs(),                       // Converts CommonJS modules to ES6
-    // terser(),                         // Minifies the code
+    terser(),                         // Minifies the code
     scss({
       output: 'dist/',
       fileName: 'styles.css',
       sourceMap: true,
+      watch: 'src/styles/',
     }),
   ],
 };
