@@ -24,8 +24,9 @@
 	},
 	"content_scripts": [
 		{
-			"matches": ["*://*/*"], // Inject scripts into all pages 
+			"matches": ["<all_urls>"], // Inject scripts into all pages 
 			"js": ["dist/content.js"], // The content script that interacts with the DOM (e.g., detecting and injecting into chat elements)
+			"css": ["src/content.css"],
 			"run_at": "document_end", // Runs when the DOM is fully loaded
 			"all_frames": true // Ensures the script is injected into all iframes on the page
 		}

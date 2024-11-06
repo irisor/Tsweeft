@@ -2,6 +2,7 @@ import { getAllLanguages, getDisplayName, getTargetLanguages } from "./utils/lan
 import { TranslationService } from "./services/translation.service";
 import { debounce } from "./utils/timing";
 import { handleMessage } from "./utils/messageUtil";
+import './styles/index.scss';
 
 const SidePanel = {
     elements: null,
@@ -10,6 +11,10 @@ const SidePanel = {
     getElements() {
         return {
             loadingOverlay: document.getElementById('loading-overlay'),
+            chatDetectionMessage: document.getElementById('chat-detection-message'),
+            manualSelectionBtn: document.getElementById('manual-selection-btn'),
+            selectChatArea: document.getElementById('select-chat-area'),
+            selectInputArea: document.getElementById('select-input-area'),
             partnerLangSelect: document.getElementById('partner-lang'),
             myLangSelect: document.getElementById('my-lang'),
             setLangsBtn: document.getElementById('set-langs-btn'),
@@ -19,6 +24,11 @@ const SidePanel = {
             myTranslatedText: document.getElementById('my-translated-text'),
             sendButton: document.getElementById('send-btn')
         };
+    },
+
+    initManualSelectionUI() {
+        this.elements.selectChatArea.addEventListener('click', () => this.startElementSelection('chatArea'));
+        this.elements.selectInputArea.addEventListener('click', () => this.startElementSelection('inputArea'));
     },
 
     initState() {
@@ -52,6 +62,15 @@ const SidePanel = {
         this.state.historyString = '';
     },
 
+    startElementSelection(elementType) {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            chrome.tabs.sendMessage(tabs[0].id, {
+                type: 'startElementSelection',
+                elementType: elementType
+            });
+        });
+    },
+
     async initializeTab() {
         const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
         if (tabs.length === 0) {
@@ -73,11 +92,11 @@ const SidePanel = {
 
             console.log('sidePanelOpened response:', response);
             if (!response || !response.success) {
-                console.error('Failed to initialize content script');
+                console.log('Failed to initialize content script');
                 handleMessage('Failed to initialize content script', 'error');
             }
         } catch (error) {
-            console.error('Error in sending sidePanelOpened:', error);
+            console.log('Error in sending sidePanelOpened:', error);
             handleMessage('Failed to initialize content script', 'error');
         }
     },
@@ -286,6 +305,8 @@ const SidePanel = {
         console.log('Sidepanel Elements:', this.elements);
         this.state = this.initState();
         console.log('Sidepanel State:', this.state);
+        this.initManualSelectionUI();
+        console.log('Sidepanel Manual selection UI initialized');
         this.initDisplay();
         console.log('Sidepanel Display initialized');
         this.initHistory();
@@ -307,5 +328,6 @@ const SidePanel = {
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('SidePanel loaded');
     SidePanel.init();
 });

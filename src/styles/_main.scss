@@ -36,3 +36,35 @@ label {
 .hidden {
 	display: none !important;
 }
+
+// Locate buttons styles
+
+.icon {
+	width: 1em;
+	height: 1em;
+	vertical-align: -0.125em;
+}
+
+.hover-btn-container {
+	position: relative;
+}
+
+.hover-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    display: none;
+    background: transparent;
+    border: none;
+    color: #ccc;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.hover-btn-container:hover .hover-btn {
+    display: block;
+}
+
+.hover-btn:hover {
+    color: #fff;
+}
