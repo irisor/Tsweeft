@@ -11,22 +11,23 @@ let permanentHighlighters = {
     chatArea: null,
     inputArea: null
 };
-let chatElementSelectedHandler = null;
+let lastChatLength = 0;
+let lastChatMyMessage = '';
 
 // Cleanup function to handle observer disconnection
 function cleanup() {
+    lastChatLength = 0;
+    lastChatMyMessage = '';
+    cleanupObserver();
+}
+
+function cleanupObserver() {
     if (observer && isObserving) {
         console.log('Cleaning up observer');
         observer.disconnect();
         observer = null;
         isObserving = false;
     }
-    if (chatElementSelectedHandler) {
-        console.log('Removing chatElementSelected event listener');
-        document.removeEventListener('chatElementSelected', chatElementSelectedHandler);
-        chatElementSelectedHandler = null;
-    }
-
 }
 
 setupMessageListeners();
@@ -82,13 +83,13 @@ function observerElement(targetElement) {
         return;
     }
 
-    sendText(targetElement.innerText);
+    sendChatToSidepanel(targetElement.innerText);
 
     // Observer setup
     if (targetElement) {
         observer = new MutationObserver(debounce((mutations) => {
             if (mutations.some(m => m.type === 'childList' || m.type === 'characterData')) {
-                sendText(targetElement.innerText);
+                sendChatToSidepanel(targetElement.innerText);
             }
         }, 500));
 
@@ -112,10 +113,13 @@ function observerElement(targetElement) {
     }
 }
 
-function sendText(newText) {
-    if (!newText) return;
+function sendChatToSidepanel(text) {
+    if (!text) return;
 
-    console.log('Tsweeft detected new message: %s', newText);
+    // Remove previous chat text from the text sent to the sidepanel, so that only new text wioll be displayed in the sidepanel
+    let newText = text.substring(lastChatLength);
+    if (newText) newText = removeStartString(newText, lastChatMyMessage); // Remove my last message
+
 
     chrome.runtime.sendMessage({
         type: 'chatMessageDetected',
@@ -130,11 +134,28 @@ function sendText(newText) {
     });
 }
 
+function removeStartString(fullString, startString) {
+    // Remove leading whitespace and newlines from startString
+    const startStringLength = startString.length;
+    const startStringTrimmed = startString.trim();
+  
+    // Check if fullString starts with startString (ignoring whitespace)
+    if (fullString.trim().startsWith(startStringTrimmed)) {
+      // Remove startString from the beginning of fullString
+      return fullString.trim().slice(startStringLength).trim();
+    } else {
+      // Return the original fullString if it doesn't start with startString
+      return fullString;
+    }
+  }
+
 function injectTextIntoChat(translatedText) {
     if (inputArea) {
         inputArea.value = translatedText;
         const event = new Event('input', { bubbles: true });
         inputArea.dispatchEvent(event);
+        lastChatLength = chatArea.innerText.length;
+        lastChatMyMessage = inputArea.value;
     }
 }
 
@@ -146,14 +167,7 @@ async function initElementSelectionUI() {
     if (chatElements) {
         chatArea = chatElements.chatArea;
         inputArea = chatElements.inputArea;
-        // notifySuccess();
     }
-    chatElementSelectedHandler = (event) => {
-        console.log('Chat element selected:', event.detail);
-        if (chatArea) observerElement(chatArea);
-    };
-
-    document.addEventListener('chatElementSelected', chatElementSelectedHandler);
 }
 
 function createOverlay() {
@@ -376,10 +390,8 @@ function startElementSelection(elementType) {
             inputArea = target;
         }
 
-        console.log(`Element ${elementType} selected and event dispatched:`, target);
-
-        // Trigger event to notify that the chat element has been selected
-        document.dispatchEvent(new CustomEvent('chatElementSelected', { detail: { elementType, element: target } }));
+        cleanupObserver();
+        observerElement(chatArea);
 
         // Clean up selection mode
         cleanupSelection(handleMouseOver, handleMouseOut, handleClick);
@@ -411,43 +423,6 @@ function cleanupSelection(mouseOverHandler, mouseOutHandler, clickHandler) {
     if (overlay) {
         overlay.style.pointerEvents = 'auto';
     }
-}
-
-function storeElementReferences() {
-    // Store unique identifiers for the elements
-    const chatAreaPath = generateElementPath(chatArea);
-    const inputAreaPath = generateElementPath(inputArea);
-
-    // Store in extension storage
-    chrome.storage.local.set({
-        chatElementPaths: {
-            chatArea: chatAreaPath,
-            inputArea: inputAreaPath
-        }
-    });
-};
-
-function generateElementPath(element) {
-    // Generate a unique CSS selector path for the element
-    let path = [];
-    while (element && element.nodeType === Node.ELEMENT_NODE) {
-        let selector = element.nodeName.toLowerCase();
-        if (element.id) {
-            selector += `#${element.id}`;
-            path.unshift(selector);
-            break;
-        } else {
-            let sibling = element;
-            let nth = 1;
-            while (sibling = sibling.previousElementSibling) {
-                if (sibling.nodeName.toLowerCase() === selector) nth++;
-            }
-            if (nth !== 1) selector += `:nth-of-type(${nth})`;
-        }
-        path.unshift(selector);
-        element = element.parentNode;
-    }
-    return path.join(' > ');
 }
 
 function debounce(func, time) {

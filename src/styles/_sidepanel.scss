@@ -13,11 +13,11 @@ h1 {
 }
 
 // Language selection styles
-.language-selection {
+.language-selection__inner {
 	align-items: end;
 	display: grid;
     grid-auto-flow: column;
-    grid-template-columns: 1fr 1fr 70px;
+    grid-template-columns: 1fr 1fr 50px;
 	justify-content: space-between;
 	gap: 10px;
 

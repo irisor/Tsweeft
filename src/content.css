@@ -24,25 +24,3 @@
 	box-shadow: 0 0 0 2px rgba(255, 128, 0, 0.5);
 	background-color: rgba(255, 128, 0, 0.1);
 }
-
-#select-chat.selecting,
-#select-input.selecting {
-	background-color: #0084ff;
-	color: white;
-	transform: scale(0.98);
-}
-
-.manual-selection-ui button {
-	transition: all 0.2s ease-in-out;
-	padding: 8px 16px;
-	margin: 5px;
-	border: 1px solid #0084ff;
-	border-radius: 4px;
-	background-color: white;
-	color: #0084ff;
-	cursor: pointer;
-}
-
-.manual-selection-ui button:hover {
-	background-color: #f0f8ff;
-}
