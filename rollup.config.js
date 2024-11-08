@@ -1,7 +1,8 @@
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import terser from "@rollup/plugin-terser";
-import sass from 'rollup-plugin-sass'
+import sass from 'rollup-plugin-sass';
+import copy from 'rollup-plugin-copy';
 
 export default {
   input: {
@@ -23,5 +24,13 @@ export default {
       options: { sourceMap: true },  // Disables source maps (optional)
       outputStyle: 'compressed',      // Minifies CSS output
     }),
+    copy({
+      targets: [
+        {
+          src: ['src/content.css'],
+          dest: 'dist'
+        }
+      ]
+    })
   ],
 };

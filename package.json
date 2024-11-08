@@ -17,5 +17,8 @@
     "rollup": "^4.24.3",
     "rollup-plugin-sass": "^1.14.0",
     "sass": "^1.80.5"
+  },
+  "dependencies": {
+    "rollup-plugin-copy": "^3.5.0"
   }
 }

@@ -1,4 +1,4 @@
-import { handleMessage } from "../utils/messageUtil";
+import { handleUserMessage } from "../utils/userMessageUtil";
 
 export const TranslationService = {
     myToPartnerTranslator: null,
@@ -13,14 +13,14 @@ export const TranslationService = {
         const canTranslate = await translation.canTranslate(languagePair);
 
         if (canTranslate === 'no') {
-            handleMessage('No translation available for this language pair', 'error');
+            handleUserMessage('No translation available for this language pair', 'error');
             return null;
         }
 
         try {
             return await translation.createTranslator(languagePair);
         } catch (error) {
-            handleMessage('Error setting translation', 'error');
+            handleUserMessage('Error setting translation', 'error');
             console.error('Error setting translation', error);
             return null;
         }
@@ -42,7 +42,7 @@ export const TranslationService = {
             
             return true;
         } catch (error) {
-            handleMessage('Failed to setup translation', 'error');
+            handleUserMessage('Failed to setup translation', 'error');
             console.error('Failed to setup translation', error);
             return false;
         }

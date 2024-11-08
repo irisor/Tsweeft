@@ -1,7 +1,7 @@
 import { getAllLanguages, getDisplayName, getTargetLanguages } from "./utils/languagePairUtils";
 import { TranslationService } from "./services/translation.service";
 import { debounce } from "./utils/timing";
-import { handleMessage } from "./utils/messageUtil";
+import { handleUserMessage } from "./utils/userMessageUtil";
 import './styles/index.scss';
 
 const SidePanel = {
@@ -93,11 +93,11 @@ const SidePanel = {
             console.log('sidePanelOpened response:', response);
             if (!response || !response.success) {
                 console.log('Failed to initialize content script');
-                handleMessage('Failed to initialize content script', 'error');
+                handleUserMessage('Failed to initialize content script', 'error');
             }
         } catch (error) {
             console.log('Error in sending sidePanelOpened:', error);
-            handleMessage('Failed to initialize content script', 'error');
+            handleUserMessage('Failed to initialize content script', 'error');
         }
     },
 
@@ -136,14 +136,23 @@ const SidePanel = {
         this.disableInputs(true);
 
         try {
+            const partnerLang = this.elements.partnerLangSelect.value;
+            const myLang = this.elements.myLangSelect.value;
+            const partnerLangDisplayName = this.elements.partnerLangSelect?.selectedOptions[0]?.textContent;
+            const myLangDisplayName = this.elements.myLangSelect?.selectedOptions[0]?.textContent;
+
+            if (!partnerLang || !myLang) {
+                throw new Error('Select a language pair');
+            }
+
             this.state.selectedLanguages = {
                 partner: {
-                    code: this.elements.partnerLangSelect.value,
-                    displayName: this.elements.partnerLangSelect?.selectedOptions[0]?.textContent
+                    code: partnerLang,
+                    displayName: partnerLangDisplayName
                 },
                 my: {
-                    code: this.elements.myLangSelect.value,
-                    displayName: this.elements.myLangSelect?.selectedOptions[0]?.textContent
+                    code: myLang,
+                    displayName: myLangDisplayName
                 }
             };
 
@@ -151,19 +160,25 @@ const SidePanel = {
             await chrome.storage.local.set({ selectedLanguages: this.state.selectedLanguages });
 
             this.updatePartnerText(this.elements.partnerText.value);
-            const translated = await TranslationService.translateText(this.elements.myText.value, false);
-            this.elements.myTranslatedText.value = translated;
 
-            handleMessage(
-                `Language pair updated to ${this.state.selectedLanguages.partner.displayName} to ${this.state.selectedLanguages.my.displayName}`,
+            handleUserMessage(
+                `Language pair updated to ${partnerLangDisplayName} to ${myLangDisplayName}`,
                 'success'
             );
         } catch (error) {
-            handleMessage('Error updating languages', 'error');
+            handleUserMessage('Error updating languages', 'error');
             console.error('Error updating languages:', error);
+            return;
         } finally {
             this.elements.loadingOverlay.classList.add('hidden');
             this.disableInputs(false);
+        }
+
+        try {
+            const translated = await TranslationService.translateText(this.elements.myText.value, false);
+            this.elements.myTranslatedText.value = translated;
+        } catch (error) {
+            console.log('Error translating text:', error);
         }
     },
 
@@ -213,18 +228,19 @@ const SidePanel = {
     },
 
     setupEventListeners() {
+        console.log('Sidepanel setting up event listeners ***');
         // UI event listeners
         window.addEventListener('beforeunload', async () => {
             console.log('Sidepanel Sending sidePanelClosed message to tab:', this.state.tabId);
+
             if (this.state.tabId) {
-                try {
-                    await chrome.tabs.sendMessage(this.state.tabId, {
-                        type: 'sidePanelClosed'
-                    });
-                    console.log('Successfully sent sidePanelClosed message');
-                } catch (error) {
+                chrome.tabs.sendMessage(this.state.tabId, {
+                    type: 'sidePanelClosed'
+                }, (response) => {
+                    console.log('sidePanelClosed message sent successfully:', response);
+                }).catch((error) => {
                     console.error('Error sending sidePanelClosed:', error);
-                }
+                });
             }
         });
 

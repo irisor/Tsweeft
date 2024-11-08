@@ -18,6 +18,15 @@ let lastChatMyMessage = '';
 function cleanup() {
     lastChatLength = 0;
     lastChatMyMessage = '';
+
+    // Cleanup permanent highlighter variables and html classes
+    removeHighlighters();
+    Object.keys(permanentHighlighters).forEach((key) => {
+        if (!permanentHighlighters[key]) return;
+        permanentHighlighters[key].remove();
+        permanentHighlighters[key] = null;
+    });
+
     cleanupObserver();
 }
 
@@ -321,6 +330,13 @@ function createHighlighter(className) {
     highlighter.className = `element-highlighter ${className}`;
     document.body.appendChild(highlighter);
     return highlighter;
+}
+
+function removeHighlighters() {
+    const highlighters = document.querySelectorAll('.element-highlighter');
+    for (const highlighter of highlighters) {
+        highlighter.remove();
+    }
 }
 
 function updateHighlighterPosition(highlighter, element) {

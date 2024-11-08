@@ -15,18 +15,35 @@
     <details class="extension-explanation">
       <summary>How to use this extension</summary>
       <section class="extension-explanation">
-       <ol>
-        <li>Select the chat area: click the '<a href="#select-chat-area">Select chat area</a>' button below to select the conversation area on the webpage.</li>
-        <li>Select the input area: click the '<a href="#select-input-area">Select input area</a>' button below to select the text input field where you write your chat messages.</li>
-        <li>Verify that your language and your partner's language are set correctly in the  '<a href="#language-selection">Language Selection</a>' section.</li>
-        <li>Your partner's text will appear in the '<a href="#partner-text-container">Partner Text</a>' field with its translation.</li>
-        <li>Write your own answer in your language in the '<a href="#my-text">My Text</a>' field; the translation will appear immediately in the '<a href="#my-translated-text">My Translated Text</a>' field.</li>
-        <li>Click the '<a href="#send-btn">Send</a>' button to send your message.</li>
-        <li>Return to the webpage, review your answer, and submit it.</li>
-      </ol>
-      <strong>This extension cannot interact with certain chat elements, such as those inside iframes.</strong>
+        <ol>
+          <li>Select the chat area: click the '<a href="#select-chat-area">Select chat area</a>' button below to select
+            the conversation area on the webpage.</li>
+          <li>Select the input area: click the '<a href="#select-input-area">Select input area</a>' button below to
+            select the text input field where you write your chat messages.</li>
+          <li>Verify that your language and your partner's language are set correctly in the '<a
+              href="#language-selection">Language Selection</a>' section.</li>
+          <li>Your partner's text will appear in the '<a href="#partner-text-container">Partner Text</a>' field with its
+            translation.</li>
+          <li>Write your own answer in your language in the '<a href="#my-text">My Text</a>' field; the translation will
+            appear immediately in the '<a href="#my-translated-text">My Translated Text</a>' field.</li>
+          <li>Click the '<a href="#send-btn">Send</a>' button to send your message.</li>
+          <li>Return to the webpage, review your answer, and submit it.</li>
+        </ol>
+        <strong>This extension cannot interact with certain chat elements, such as those inside iframes.</strong>
       </section>
     </details>
+    <!-- Chat Detection -->
+    <section class="chat-detection">
+      <details open class="manual-selection-details">
+        <summary>Chat elements manual selection</summary>
+        <section>
+          <p class="chat-detection-message">Chat elements not detected.</p>
+          <p class="chat-detection-message">Please select them manually:</p>
+          <button id="select-chat-area" class="btn">Select Chat Area</button>
+          <button id="select-input-area" class="btn">Select Input Area</button>
+        </section>
+      </details>
+    </section>
     <!-- Language Selection -->
     <details class="language-selection" id="language-selection">
       <summary>Language Selection</summary>
@@ -42,19 +59,14 @@
           </select>
         </section>
         <button id="set-langs-btn" class="btn">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="icon"><!--!Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.--><path d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"
+            class="icon"><!--!Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.-->
+            <path
+              d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z" />
+          </svg>
         </button>
       </section>
     </details>
-    <!-- Chat Detection -->
-    <section class="chat-detection">
-      <details open class="manual-selection-details">
-        <summary>Chat elements manual selection</summary>
-        <p class="chat-detection-message">Chat elements not detected. Please select them manually:</p>
-        <button id="select-chat-area" class="btn">Select Chat Area</button>
-        <button id="select-input-area" class="btn">Select Input Area</button>
-      </details>
-    </section>
     <!-- Partner Text -->
     <label for="partner-text">Partner Text:</label>
     <section class="partner-text-container hover-btn-container" id="partner-text-container">
@@ -90,4 +102,3 @@
 </body>
 
 </html>
-
