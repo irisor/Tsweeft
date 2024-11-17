@@ -188,7 +188,7 @@ function createOverlay() {
 }
 
 async function detectChat() {
-   console.log('detectChat');
+    console.log('detectChat');
 
     return null;
 }
@@ -202,11 +202,28 @@ function getPath(element) {
     return path;
 }
 
-function createHighlighter(className, referenceElement=null) {
+// Track changes in the highlighters reference elements, to recalculate the highlighter position and size
+const highlighters = [];
+const debouncedObserverCallback = debounce((mutations) => {
+    mutations.forEach((mutation) => {
+        const highlighter = highlighters.find((highlighter) => highlighter.referenceElement === mutation.target);
+        if (highlighter) {
+            updateHighlighterPosition(highlighter);
+        }
+    });
+}, 500);
+const mutationObserver = new MutationObserver(debouncedObserverCallback);
+
+function createHighlighter(className, referenceElement = null) {
     const highlighter = document.createElement('div');
     highlighter.className = `element-highlighter ${className}`;
     if (referenceElement) {
-        highlighter.referenceElement = referenceElement; // Add reference element property
+        highlighter.referenceElement = referenceElement;
+        highlighters.push(highlighter);
+        mutationObserver.observe(highlighter.referenceElement, {
+            childList: true,
+            subtree: true,
+        });
     }
     document.body.appendChild(highlighter);
     return highlighter;
@@ -214,71 +231,11 @@ function createHighlighter(className, referenceElement=null) {
 
 function removeHighlighters() {
     const highlighters = document.querySelectorAll('.element-highlighter');
+    mutationObserver.disconnect();
+
     for (const highlighter of highlighters) {
         highlighter.remove();
     }
-}
-
-function getElementPosition(element) {
-    const rect = element.getBoundingClientRect();
-    
-    // Get all scroll positions up to the root
-    let scrollX = 0;
-    let scrollY = 0;
-    let currentElement = element;
-    
-    while (currentElement && currentElement !== document.body && currentElement !== document.documentElement) {
-        const parent = currentElement.parentElement;
-        if (!parent) break;
-        
-        // Check if the parent creates a new positioning context
-        const position = window.getComputedStyle(parent).position;
-        if (position === 'relative' || position === 'absolute' || position === 'fixed' || position === 'sticky') {
-            const parentRect = parent.getBoundingClientRect();
-            scrollX -= parentRect.left;
-            scrollY -= parentRect.top;
-            
-            if (position === 'fixed') {
-                // For fixed elements, we don't want to include the scroll offset
-                break;
-            }
-        }
-        
-        if (parent.scrollLeft || parent.scrollTop) {
-            scrollX += parent.scrollLeft;
-            scrollY += parent.scrollTop;
-        }
-        
-        currentElement = parent;
-    }
-    
-    // For elements within fixed/sticky containers, we need to adjust for scroll
-    const elementPosition = window.getComputedStyle(element).position;
-    const hasFixedAncestor = hasFixedParent(element);
-    
-    if (!hasFixedAncestor && elementPosition !== 'fixed') {
-        scrollX += window.pageXOffset;
-        scrollY += window.pageYOffset;
-    }
-    
-    return {
-        top: rect.top + scrollY,
-        left: rect.left + scrollX,
-        width: rect.width,
-        height: rect.height
-    };
-}
-
-function hasFixedParent(element) {
-    let current = element.parentElement;
-    while (current && current !== document.body && current !== document.documentElement) {
-        const position = window.getComputedStyle(current).position;
-        if (position === 'fixed') {
-            return true;
-        }
-        current = current.parentElement;
-    }
-    return false;
 }
 
 function updateHighlighterPosition(highlighter) {
@@ -340,6 +297,7 @@ function startElementSelection(elementType) {
         // Remove previous permanent highlighter for this element type if it exists
         if (permanentHighlighters[elementType]) {
             permanentHighlighters[elementType].remove();
+            mutationObserver.disconnect(permanentHighlighters[elementType].referenceElement);
         }
 
         // Create new permanent highlighter
