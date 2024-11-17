@@ -15,7 +15,7 @@
     <details class="extension-explanation">
       <summary>How to use this extension</summary>
       <section class="extension-explanation">
-        <ol>
+        <ol class="extension-explanation__list">
           <li>Select the chat area: click the '<a href="#select-chat-area">Select chat area</a>' button below to select
             the conversation area on the webpage.</li>
           <li>Select the input area: click the '<a href="#select-input-area">Select input area</a>' button below to
@@ -29,16 +29,19 @@
           <li>Click the '<a href="#send-btn">Send</a>' button to send your message.</li>
           <li>Return to the webpage, review your answer, and submit it.</li>
         </ol>
-        <strong>This extension cannot interact with certain chat elements, such as those inside iframes.</strong>
+        <strong>This extension may not be able to interact with certain chat boxes on certain websites, such as those
+          inside iframes.</strong>
       </section>
     </details>
     <!-- Chat Detection -->
-    <section class="chat-detection">
-      <details open class="manual-selection-details">
+    <section id="chat-detection" class="chat-detection">
+      <details open  class="manual-selection-details">
         <summary>Chat elements manual selection</summary>
         <section>
-          <p class="chat-detection-message">Chat elements not detected.</p>
-          <p class="chat-detection-message">Please select them manually:</p>
+          <section id="chat-detection-message" class="chat-detection-message">
+            <p>Chat area not detected.</p>
+            <p>Please select the chat area manually:</p>
+          </section>
           <button id="select-chat-area" class="btn">Select Chat Area</button>
           <button id="select-input-area" class="btn">Select Input Area</button>
         </section>
@@ -86,7 +89,7 @@
     <textarea id="translated-partner-text" class="language-text" rows="5" readonly></textarea>
     <!-- My Text -->
     <label for="my-text">My Text:</label>
-    <textarea id="my-text" class="language-text" rows="5" autofocus></textarea>
+    <textarea id="my-text" class="language-text" rows="5"></textarea>
     <!-- My Translated Text -->
     <label for="my-translated-text">My Translated Text:</label>
     <textarea id="my-translated-text" class="language-text" rows="5"></textarea>

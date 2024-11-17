@@ -46,6 +46,10 @@ const SidePanel = {
                     code: browserLanguage,
                     displayName: getDisplayName(browserLanguage) || browserLanguage
                 }
+            },
+            selectedElements: {
+                chatArea: false,
+                inputArea: false
             }
         };
     },
@@ -67,6 +71,10 @@ const SidePanel = {
             chrome.tabs.sendMessage(tabs[0].id, {
                 type: 'startElementSelection',
                 elementType: elementType
+            }, (response) => {
+                if (response && response.error) {
+                    console.log('Error starting element selection:', response.error);
+                }
             });
         });
     },
@@ -212,6 +220,21 @@ const SidePanel = {
                 sendResponse({ success: true });
                 break;
 
+            case 'elementSelected':
+                console.log('Sidepanel Element selected:', message.elementType, this.elements.chatDetectionMessage);
+                this.state.selectedElements[message.elementType] = true;
+                if (message.elementType === 'chatArea' && this.elements.chatDetectionMessage) {
+                    this.elements.chatDetectionMessage.classList.add('hidden');
+                }
+                if (this.state.selectedElements['chatArea'] && this.state.selectedElements['inputArea']) {
+                    console.log('myText element:', this.elements.myText);
+                    console.log('myText tabIndex:', this.elements.myText.tabIndex);
+                    this.elements.myText.focus();
+                    this.elements.myText.scrollIntoView();
+                    
+                }
+                break;
+
             case 'chatMessageDetected':
                 console.log('Received chat message:', message.text.substring(0, 50) + '...');
                 this.updatePartnerText(message.text);
@@ -237,9 +260,11 @@ const SidePanel = {
                 chrome.tabs.sendMessage(this.state.tabId, {
                     type: 'sidePanelClosed'
                 }, (response) => {
-                    console.log('sidePanelClosed message sent successfully:', response);
-                }).catch((error) => {
-                    console.error('Error sending sidePanelClosed:', error);
+                    if (chrome.runtime.lastError) {
+                        console.log('Error sending sidePanelClosed:', chrome.runtime.lastError);
+                    } else {
+                        console.log('sidePanelClosed message sent successfully:', response);
+                    }
                 });
             }
         });

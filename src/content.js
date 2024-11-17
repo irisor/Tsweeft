@@ -52,6 +52,7 @@ function setupMessageListeners() {
 
             case "startElementSelection":
                 startElementSelection(message.elementType);
+                sendResponse({ success: true });
                 break;
 
             case "sidePanelOpened":
@@ -64,7 +65,7 @@ function setupMessageListeners() {
                 cleanup();
                 console.log('Activating observer on this tab.', tabId);
                 sendResponse({ success: true });
-                return true;
+                break;
 
             case "sidePanelClosed":
                 console.log('content sidePanelClosed', message);
@@ -147,16 +148,16 @@ function removeStartString(fullString, startString) {
     // Remove leading whitespace and newlines from startString
     const startStringLength = startString.length;
     const startStringTrimmed = startString.trim();
-  
+
     // Check if fullString starts with startString (ignoring whitespace)
     if (fullString.trim().startsWith(startStringTrimmed)) {
-      // Remove startString from the beginning of fullString
-      return fullString.trim().slice(startStringLength).trim();
+        // Remove startString from the beginning of fullString
+        return fullString.trim().slice(startStringLength).trim();
     } else {
-      // Return the original fullString if it doesn't start with startString
-      return fullString;
+        // Return the original fullString if it doesn't start with startString
+        return fullString;
     }
-  }
+}
 
 function injectTextIntoChat(translatedText) {
     if (inputArea) {
@@ -187,127 +188,9 @@ function createOverlay() {
 }
 
 async function detectChat() {
-    // Common chat patterns to look for
-    const patterns = {
-        chatArea: [
-            '[aria-label*="chat"]',
-            '[class*="chat"]',
-            '[id*="chat"]',
-            '[class*="conversation"]',
-            '[class*="messages"]'
-        ],
-        inputArea: [
-            'textarea',
-            '[contenteditable="true"]',
-            'input[type="text"]',
-            '[role="textbox"]'
-        ]
-    };
-
-    // First try direct DOM
-    let results = detectInCurrentDocument(patterns);
-    if (results) return results;
-
-    // Then try iframes
-    const iframes = document.querySelectorAll('iframe');
-    for (const iframe of iframes) {
-        try {
-            results = await detectInIframe(iframe, patterns);
-            if (results) return results;
-        } catch (e) {
-            console.warn('Failed to access iframe:', e);
-        }
-    }
+   console.log('detectChat');
 
     return null;
-}
-
-function detectInCurrentDocument(patterns) {
-    for (const chatSelector of patterns.chatArea) {
-        const chatElement = document.querySelector(chatSelector);
-        if (chatElement) {
-            // Find nearest input area
-            for (const inputSelector of patterns.inputArea) {
-                const inputElement = document.querySelector(inputSelector);
-                if (inputElement && areElementsRelated(chatElement, inputElement)) {
-                    return { chatArea: chatElement, inputArea: inputElement };
-                }
-            }
-        }
-    }
-    return null;
-}
-
-async function detectInIframe(iframe, patterns) {
-    // Create a temporary invisible overlay to intercept iframe interactions
-    const overlay = document.createElement('div');
-    overlay.style.cssText = `
-    position: absolute;
-    top: ${iframe.offsetTop}px;
-    left: ${iframe.offsetLeft}px;
-    width: ${iframe.offsetWidth}px;
-    height: ${iframe.offsetHeight}px;
-    z-index: 2147483647;
-    background: transparent;
-  `;
-
-    document.body.appendChild(overlay);
-
-    // Use MutationObserver to detect changes in iframe
-    return new Promise((resolve) => {
-        const observer = new MutationObserver((mutations) => {
-            const iframeDoc = iframe.contentDocument;
-            if (iframeDoc) {
-                const result = detectInCurrentDocument.call(
-                    { document: iframeDoc },
-                    patterns
-                );
-                if (result) {
-                    observer.disconnect();
-                    overlay.remove();
-                    resolve(result);
-                }
-            }
-        });
-
-        observer.observe(iframe, {
-            attributes: true,
-            childList: true,
-            subtree: true
-        });
-
-        // Timeout after 5 seconds
-        setTimeout(() => {
-            observer.disconnect();
-            overlay.remove();
-            resolve(null);
-        }, 5000);
-    });
-}
-
-function areElementsRelated(chatElement, inputElement) {
-    // Check if elements are likely related (e.g., share common ancestor)
-    let commonAncestor = findCommonAncestor(chatElement, inputElement);
-    if (!commonAncestor) return false;
-
-    // Check if they're reasonably close in the DOM
-    const distance = calculateDOMDistance(chatElement, inputElement);
-    return distance < 10; // Arbitrary threshold
-}
-
-function findCommonAncestor(el1, el2) {
-    const path1 = getPath(el1);
-    const path2 = getPath(el2);
-
-    let commonAncestor = null;
-    for (let i = 0; i < path1.length && i < path2.length; i++) {
-        if (path1[i] === path2[i]) {
-            commonAncestor = path1[i];
-        } else {
-            break;
-        }
-    }
-    return commonAncestor;
 }
 
 function getPath(element) {
@@ -319,15 +202,12 @@ function getPath(element) {
     return path;
 }
 
-function calculateDOMDistance(el1, el2) {
-    const path1 = getPath(el1);
-    const path2 = getPath(el2);
-    return path1.length + path2.length - 2 * findCommonAncestor(el1, el2).length;
-}
-
-function createHighlighter(className) {
+function createHighlighter(className, referenceElement=null) {
     const highlighter = document.createElement('div');
     highlighter.className = `element-highlighter ${className}`;
+    if (referenceElement) {
+        highlighter.referenceElement = referenceElement; // Add reference element property
+    }
     document.body.appendChild(highlighter);
     return highlighter;
 }
@@ -339,15 +219,81 @@ function removeHighlighters() {
     }
 }
 
-function updateHighlighterPosition(highlighter, element) {
-    if (!element || !highlighter) return;
-
+function getElementPosition(element) {
     const rect = element.getBoundingClientRect();
-    highlighter.style.top = `${rect.top + window.scrollY}px`;
-    highlighter.style.left = `${rect.left + window.scrollX}px`;
+    
+    // Get all scroll positions up to the root
+    let scrollX = 0;
+    let scrollY = 0;
+    let currentElement = element;
+    
+    while (currentElement && currentElement !== document.body && currentElement !== document.documentElement) {
+        const parent = currentElement.parentElement;
+        if (!parent) break;
+        
+        // Check if the parent creates a new positioning context
+        const position = window.getComputedStyle(parent).position;
+        if (position === 'relative' || position === 'absolute' || position === 'fixed' || position === 'sticky') {
+            const parentRect = parent.getBoundingClientRect();
+            scrollX -= parentRect.left;
+            scrollY -= parentRect.top;
+            
+            if (position === 'fixed') {
+                // For fixed elements, we don't want to include the scroll offset
+                break;
+            }
+        }
+        
+        if (parent.scrollLeft || parent.scrollTop) {
+            scrollX += parent.scrollLeft;
+            scrollY += parent.scrollTop;
+        }
+        
+        currentElement = parent;
+    }
+    
+    // For elements within fixed/sticky containers, we need to adjust for scroll
+    const elementPosition = window.getComputedStyle(element).position;
+    const hasFixedAncestor = hasFixedParent(element);
+    
+    if (!hasFixedAncestor && elementPosition !== 'fixed') {
+        scrollX += window.pageXOffset;
+        scrollY += window.pageYOffset;
+    }
+    
+    return {
+        top: rect.top + scrollY,
+        left: rect.left + scrollX,
+        width: rect.width,
+        height: rect.height
+    };
+}
+
+function hasFixedParent(element) {
+    let current = element.parentElement;
+    while (current && current !== document.body && current !== document.documentElement) {
+        const position = window.getComputedStyle(current).position;
+        if (position === 'fixed') {
+            return true;
+        }
+        current = current.parentElement;
+    }
+    return false;
+}
+
+function updateHighlighterPosition(highlighter) {
+    if (!highlighter || !highlighter.referenceElement) return;
+
+    // Set initial styles for the highlighter
+    highlighter.style.position = 'fixed';  // Changed to fixed positioning
+    highlighter.style.pointerEvents = 'none';
+    highlighter.style.zIndex = '2147483647'; // Max z-index to ensure visibility
+
+    const rect = highlighter.referenceElement.getBoundingClientRect();
+    highlighter.style.top = `${rect.top}px`;
+    highlighter.style.left = `${rect.left}px`;
     highlighter.style.width = `${rect.width}px`;
     highlighter.style.height = `${rect.height}px`;
-    highlighter.style.display = 'block';
 }
 
 function startElementSelection(elementType) {
@@ -357,20 +303,21 @@ function startElementSelection(elementType) {
     }
 
     isSelectionMode = true;
-    overlay.style.pointerEvents = 'none';
+    if (overlay) overlay.style.pointerEvents = 'none';
 
     // Create temporary highlighter for hover effect
     activeHighlighter = createHighlighter('temp-highlighter');
 
-    const handleMouseOver = (e) => {
+    const handleMouseOver = debounce((e) => {
         if (!isSelectionMode) return;
 
         const target = e.target;
         // Ignore highlighters and overlay
         if (target.classList.contains('element-highlighter') || target === overlay) return;
+        activeHighlighter.referenceElement = target;
 
-        updateHighlighterPosition(activeHighlighter, target);
-    };
+        updateHighlighterPosition(activeHighlighter);
+    }, 100);
 
     const handleMouseOut = (e) => {
         if (!isSelectionMode) return;
@@ -378,7 +325,7 @@ function startElementSelection(elementType) {
         const target = e.target;
         if (target.classList.contains('element-highlighter') || target === overlay) return;
 
-        activeHighlighter.style.display = 'none';
+        if (activeHighlighter.target) activeHighlighter.style.display = 'none';
     };
 
     const handleClick = (e) => {
@@ -396,30 +343,51 @@ function startElementSelection(elementType) {
         }
 
         // Create new permanent highlighter
-        permanentHighlighters[elementType] = createHighlighter(`permanent-highlighter ${elementType}-highlighter`);
-        updateHighlighterPosition(permanentHighlighters[elementType], target);
+        permanentHighlighters[elementType] = createHighlighter(`permanent-highlighter ${elementType}-highlighter`, target);
+        updateHighlighterPosition(permanentHighlighters[elementType]);
 
         // Update stored element reference
         if (elementType === 'chatArea') {
             chatArea = target;
+            cleanupObserver();
+            observerElement(chatArea);
         } else {
             inputArea = target;
+            let inputOrTextarea = inputArea.querySelector('input, textarea');
+
+            // Set the inputArea on the inner input or textarea
+            while (!inputOrTextarea && inputArea.children.length) {
+                inputArea = inputArea.children[0];
+                inputOrTextarea = inputArea.querySelector('input, textarea');
+            }
+            inputArea = inputOrTextarea || inputArea;
         }
 
-        cleanupObserver();
-        observerElement(chatArea);
-
         // Clean up selection mode
-        cleanupSelection(handleMouseOver, handleMouseOut, handleClick);
+        cleanupSelection(handleMouseOver, handleMouseOut, handleClick, handleResizeAndScroll);
+
+        chrome.runtime.sendMessage({ type: 'elementSelected', elementType });
+        console.log('Element selected:', elementType, target.getBoundingClientRect());
     };
+
+    const handleResizeAndScroll = debounce(() => {
+        console.log("handleResizeAndScroll", permanentHighlighters);
+        Object.keys(permanentHighlighters).forEach((elementType) => {
+            if (permanentHighlighters[elementType]) {
+                updateHighlighterPosition(permanentHighlighters[elementType]);
+            }
+        });
+    }, 100);
 
     // Use capturing phase for events
     document.addEventListener('mouseover', handleMouseOver, true);
     document.addEventListener('mouseout', handleMouseOut, true);
     document.addEventListener('click', handleClick, true);
+    window.addEventListener('resize', handleResizeAndScroll, false);
+    document.addEventListener('scroll', handleResizeAndScroll, false);
 }
 
-function cleanupSelection(mouseOverHandler, mouseOutHandler, clickHandler) {
+function cleanupSelection(mouseOverHandler, mouseOutHandler, clickHandler, resizeAndScrollHandler) {
     if (mouseOverHandler) {
         document.removeEventListener('mouseover', mouseOverHandler, true);
     }
@@ -428,6 +396,11 @@ function cleanupSelection(mouseOverHandler, mouseOutHandler, clickHandler) {
     }
     if (clickHandler) {
         document.removeEventListener('click', clickHandler, true);
+    }
+
+    if (resizeAndScrollHandler) {
+        window.removeEventListener('resize', resizeAndScrollHandler, true);
+        document.removeEventListener('scroll', resizeAndScrollHandler, true);
     }
 
     if (activeHighlighter) {
