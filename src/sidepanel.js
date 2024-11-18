@@ -251,9 +251,12 @@ const SidePanel = {
     },
 
     setupEventListeners() {
-        console.log('Sidepanel setting up event listeners ***');
+        console.log('Sidepanel setting up event listeners ***', this.state.tabId);
         // UI event listeners
-        window.addEventListener('beforeunload', async () => {
+        // window.addEventListener('beforeunload', async () => {
+        // window.addEventListener('unload', async () => {
+        // chrome.windows.onRemoved.addListener((windowId) => {
+        document.addEventListener('visibilitychange', () => {
             console.log('Sidepanel Sending sidePanelClosed message to tab:', this.state.tabId);
 
             if (this.state.tabId) {

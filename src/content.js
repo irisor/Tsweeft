@@ -43,7 +43,7 @@ setupMessageListeners();
 
 function setupMessageListeners() {
 
-    // Listen for messages from the background script
+    // Listen for messages
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
         console.log('Content onMessage', message, sender);
@@ -64,14 +64,12 @@ function setupMessageListeners() {
                 initElementSelectionUI();
                 cleanup();
                 console.log('Activating observer on this tab.', tabId);
-                sendResponse({ success: true });
                 break;
 
             case "sidePanelClosed":
                 console.log('content sidePanelClosed', message);
                 cleanup();
-                sendResponse({ success: true });
-                return true;
+                break;
 
             case "injectTextIntoChat":
                 injectTextIntoChat(message.text);
@@ -129,7 +127,6 @@ function sendChatToSidepanel(text) {
     // Remove previous chat text from the text sent to the sidepanel, so that only new text wioll be displayed in the sidepanel
     let newText = text.substring(lastChatLength);
     if (newText) newText = removeStartString(newText, lastChatMyMessage); // Remove my last message
-
 
     chrome.runtime.sendMessage({
         type: 'chatMessageDetected',
@@ -329,7 +326,6 @@ function startElementSelection(elementType) {
     };
 
     const handleResizeAndScroll = debounce(() => {
-        console.log("handleResizeAndScroll", permanentHighlighters);
         Object.keys(permanentHighlighters).forEach((elementType) => {
             if (permanentHighlighters[elementType]) {
                 updateHighlighterPosition(permanentHighlighters[elementType]);
