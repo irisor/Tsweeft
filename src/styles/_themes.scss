@@ -6,6 +6,9 @@
 	--primary: #789d91;
 	--secondary: #b0bec6;
 	--accent: #929ab0;
+	--error: #f44336;
+	--success: #8bc34a;
+	--warning: #ff9800;
 } 
 
 @mixin theme-dark() {
@@ -15,6 +18,9 @@
 	--primary: #63887c;
 	--secondary: #3a4850;
 	--accent: #4f576d;
+	--error: #f44336;
+	--success: #8bc34a;
+	--warning: #ff9800;
 }
 
 // Fallback - light theme

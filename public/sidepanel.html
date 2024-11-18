@@ -11,29 +11,85 @@
 <body>
   <section class="sidepanel-container">
     <h1>Tsweeft Chat Translator</h1>
-    <!-- Language Selection -->
-    <section class="language-selection">
-      <section class="language-selection__item" class="language-selection__item--my">
-        <label for="my-lang">My Language:</label>
-        <select id="my-lang">
-        </select>
+    <!-- Extension Explanation -->
+    <details class="extension-explanation">
+      <summary>How to use this extension</summary>
+      <section class="extension-explanation">
+        <ol class="extension-explanation__list">
+          <li>Select the chat area: click the '<a href="#select-chat-area">Select chat area</a>' button below to select
+            the conversation area on the webpage.</li>
+          <li>Select the input area: click the '<a href="#select-input-area">Select input area</a>' button below to
+            select the text input field where you write your chat messages.</li>
+          <li>Verify that your language and your partner's language are set correctly in the '<a
+              href="#language-selection">Language Selection</a>' section.</li>
+          <li>Your partner's text will appear in the '<a href="#partner-text-container">Partner Text</a>' field with its
+            translation.</li>
+          <li>Write your own answer in your language in the '<a href="#my-text">My Text</a>' field; the translation will
+            appear immediately in the '<a href="#my-translated-text">My Translated Text</a>' field.</li>
+          <li>Click the '<a href="#send-btn">Send</a>' button to send your message.</li>
+          <li>Return to the webpage, review your answer, and submit it.</li>
+        </ol>
+        <strong>This extension may not be able to interact with certain chat boxes on certain websites, such as those
+          inside iframes.</strong>
       </section>
-      <section class="language-selection__item language-selection__item--partner">
-        <label for="partner-lang">Partner Language:</label>
-        <select id="partner-lang">
-        </select>
-      </section>
-      <button id="set-langs-btn" class="btn">Update</button>
+    </details>
+    <!-- Chat Detection -->
+    <section id="chat-detection" class="chat-detection">
+      <details open  class="manual-selection-details">
+        <summary>Chat elements manual selection</summary>
+        <section>
+          <section id="chat-detection-message" class="chat-detection-message">
+            <p>Chat area not detected.</p>
+            <p>Please select the chat area manually:</p>
+          </section>
+          <button id="select-chat-area" class="btn">Select Chat Area</button>
+          <button id="select-input-area" class="btn">Select Input Area</button>
+        </section>
+      </details>
     </section>
+    <!-- Language Selection -->
+    <details class="language-selection" id="language-selection">
+      <summary>Language Selection</summary>
+      <section class="language-selection__inner">
+        <section class="language-selection__item" class="language-selection__item--my">
+          <label for="my-lang">My Language:</label>
+          <select id="my-lang">
+          </select>
+        </section>
+        <section class="language-selection__item language-selection__item--partner">
+          <label for="partner-lang">Partner Language:</label>
+          <select id="partner-lang">
+          </select>
+        </section>
+        <button id="set-langs-btn" class="btn">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"
+            class="icon"><!--!Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.-->
+            <path
+              d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z" />
+          </svg>
+        </button>
+      </section>
+    </details>
     <!-- Partner Text -->
     <label for="partner-text">Partner Text:</label>
-    <textarea id="partner-text" class="language-text" rows="5" readonly></textarea>
+    <section class="partner-text-container hover-btn-container" id="partner-text-container">
+      <textarea id="partner-text" class="language-text" rows="5" readonly></textarea>
+      <button class="btn hover-btn partner-text-locate" title="Locate the chat box on the page">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon" aria-hidden="true" focusable="false" viewBox="0 0 512 512">
+
+          viewBox="0 0 512
+          512"><!--!Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.-->
+          <path
+            d="M256 0c17.7 0 32 14.3 32 32l0 34.7C368.4 80.1 431.9 143.6 445.3 224l34.7 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-34.7 0C431.9 368.4 368.4 431.9 288 445.3l0 34.7c0 17.7-14.3 32-32 32s-32-14.3-32-32l0-34.7C143.6 431.9 80.1 368.4 66.7 288L32 288c-17.7 0-32-14.3-32-32s14.3-32 32-32l34.7 0C80.1 143.6 143.6 80.1 224 66.7L224 32c0-17.7 14.3-32 32-32zM128 256a128 128 0 1 0 256 0 128 128 0 1 0 -256 0zm128-80a80 80 0 1 1 0 160 80 80 0 1 1 0-160z" />
+        </svg>
+      </button>
+    </section>
     <!-- Translated Partner Text -->
     <label for="translated-partner-text">Translated Partner Text:</label>
     <textarea id="translated-partner-text" class="language-text" rows="5" readonly></textarea>
     <!-- My Text -->
     <label for="my-text">My Text:</label>
-    <textarea id="my-text" class="language-text" rows="5" autofocus></textarea>
+    <textarea id="my-text" class="language-text" rows="5"></textarea>
     <!-- My Translated Text -->
     <label for="my-translated-text">My Translated Text:</label>
     <textarea id="my-translated-text" class="language-text" rows="5"></textarea>

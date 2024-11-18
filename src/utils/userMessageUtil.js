@@ -1,4 +1,4 @@
-export function handleMessage(message, type) {
+export function handleUserMessage(message, type) {
 	const toastContainer = document.getElementById('toast-container');
 	if (!toastContainer) {
 	  const container = document.createElement('div');

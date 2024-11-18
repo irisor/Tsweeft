@@ -14,16 +14,16 @@
 }
 
 .toast.error {
-	background-color: #f44336;
+	background-color:var(--error);
 	color: #fff;
 }
 
 .toast.success {
-	background-color: #8bc34a;
+	background-color: var(--success);
 	color: #fff;
 }
 
 .toast.warning {
-	background-color: #ff9800;
+	background-color: var(--warning);
 	color: #fff;
 }

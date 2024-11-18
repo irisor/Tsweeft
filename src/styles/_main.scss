@@ -5,12 +5,16 @@
 	padding: 0;
 }
 
+html {
+	scroll-behavior: smooth;
+}
+
 body {
-	font-family: Arial, sans-serif;
 	background-color: var(--background);
 	color: var(--text);
+	font-family: Arial, sans-serif;
+	padding: var(--padding-around);
 	width: 350px;
-	padding: 20px;
 }
 
 .btn {
@@ -35,4 +39,53 @@ label {
 
 .hidden {
 	display: none !important;
+}
+
+// Locate buttons styles
+
+.icon {
+	width: 1em;
+	height: 1em;
+	vertical-align: -0.125em;
+}
+
+.hover-btn-container {
+	position: relative;
+}
+
+.hover-btn {
+	position: absolute;
+	top: 5px;
+	right: 5px;
+	display: none;
+	background: transparent;
+	border: none;
+	color: #ccc;
+	cursor: pointer;
+	font-size: 16px;
+}
+
+.hover-btn-container:hover .hover-btn {
+	display: block;
+}
+
+.hover-btn:hover {
+	color: #fff;
+}
+
+details {
+	summary {
+		cursor: pointer;
+		font-size: 1.2em;
+
+		+ * {
+			line-height: 1.5;
+			padding: var(--padding-around);
+			padding-inline-end: 0;
+		}
+	}
+
+	li {
+		margin-bottom: 5px;
+	}
 }

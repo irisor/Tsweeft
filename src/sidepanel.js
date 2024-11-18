@@ -1,7 +1,8 @@
 import { getAllLanguages, getDisplayName, getTargetLanguages } from "./utils/languagePairUtils";
 import { TranslationService } from "./services/translation.service";
 import { debounce } from "./utils/timing";
-import { handleMessage } from "./utils/messageUtil";
+import { handleUserMessage } from "./utils/userMessageUtil";
+import './styles/index.scss';
 
 const SidePanel = {
     elements: null,
@@ -10,6 +11,10 @@ const SidePanel = {
     getElements() {
         return {
             loadingOverlay: document.getElementById('loading-overlay'),
+            chatDetectionMessage: document.getElementById('chat-detection-message'),
+            manualSelectionBtn: document.getElementById('manual-selection-btn'),
+            selectChatArea: document.getElementById('select-chat-area'),
+            selectInputArea: document.getElementById('select-input-area'),
             partnerLangSelect: document.getElementById('partner-lang'),
             myLangSelect: document.getElementById('my-lang'),
             setLangsBtn: document.getElementById('set-langs-btn'),
@@ -19,6 +24,11 @@ const SidePanel = {
             myTranslatedText: document.getElementById('my-translated-text'),
             sendButton: document.getElementById('send-btn')
         };
+    },
+
+    initManualSelectionUI() {
+        this.elements.selectChatArea.addEventListener('click', () => this.startElementSelection('chatArea'));
+        this.elements.selectInputArea.addEventListener('click', () => this.startElementSelection('inputArea'));
     },
 
     initState() {
@@ -36,6 +46,10 @@ const SidePanel = {
                     code: browserLanguage,
                     displayName: getDisplayName(browserLanguage) || browserLanguage
                 }
+            },
+            selectedElements: {
+                chatArea: false,
+                inputArea: false
             }
         };
     },
@@ -50,6 +64,19 @@ const SidePanel = {
     initHistory() {
         this.state.history = [];
         this.state.historyString = '';
+    },
+
+    startElementSelection(elementType) {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            chrome.tabs.sendMessage(tabs[0].id, {
+                type: 'startElementSelection',
+                elementType: elementType
+            }, (response) => {
+                if (response && response.error) {
+                    console.log('Error starting element selection:', response.error);
+                }
+            });
+        });
     },
 
     async initializeTab() {
@@ -73,12 +100,12 @@ const SidePanel = {
 
             console.log('sidePanelOpened response:', response);
             if (!response || !response.success) {
-                console.error('Failed to initialize content script');
-                handleMessage('Failed to initialize content script', 'error');
+                console.log('Failed to initialize content script');
+                handleUserMessage('Failed to initialize content script', 'error');
             }
         } catch (error) {
-            console.error('Error in sending sidePanelOpened:', error);
-            handleMessage('Failed to initialize content script', 'error');
+            console.log('Error in sending sidePanelOpened:', error);
+            handleUserMessage('Failed to initialize content script', 'error');
         }
     },
 
@@ -117,14 +144,23 @@ const SidePanel = {
         this.disableInputs(true);
 
         try {
+            const partnerLang = this.elements.partnerLangSelect.value;
+            const myLang = this.elements.myLangSelect.value;
+            const partnerLangDisplayName = this.elements.partnerLangSelect?.selectedOptions[0]?.textContent;
+            const myLangDisplayName = this.elements.myLangSelect?.selectedOptions[0]?.textContent;
+
+            if (!partnerLang || !myLang) {
+                throw new Error('Select a language pair');
+            }
+
             this.state.selectedLanguages = {
                 partner: {
-                    code: this.elements.partnerLangSelect.value,
-                    displayName: this.elements.partnerLangSelect?.selectedOptions[0]?.textContent
+                    code: partnerLang,
+                    displayName: partnerLangDisplayName
                 },
                 my: {
-                    code: this.elements.myLangSelect.value,
-                    displayName: this.elements.myLangSelect?.selectedOptions[0]?.textContent
+                    code: myLang,
+                    displayName: myLangDisplayName
                 }
             };
 
@@ -132,19 +168,25 @@ const SidePanel = {
             await chrome.storage.local.set({ selectedLanguages: this.state.selectedLanguages });
 
             this.updatePartnerText(this.elements.partnerText.value);
-            const translated = await TranslationService.translateText(this.elements.myText.value, false);
-            this.elements.myTranslatedText.value = translated;
 
-            handleMessage(
-                `Language pair updated to ${this.state.selectedLanguages.partner.displayName} to ${this.state.selectedLanguages.my.displayName}`,
+            handleUserMessage(
+                `Language pair updated to ${partnerLangDisplayName} to ${myLangDisplayName}`,
                 'success'
             );
         } catch (error) {
-            handleMessage('Error updating languages', 'error');
+            handleUserMessage('Error updating languages', 'error');
             console.error('Error updating languages:', error);
+            return;
         } finally {
             this.elements.loadingOverlay.classList.add('hidden');
             this.disableInputs(false);
+        }
+
+        try {
+            const translated = await TranslationService.translateText(this.elements.myText.value, false);
+            this.elements.myTranslatedText.value = translated;
+        } catch (error) {
+            console.log('Error translating text:', error);
         }
     },
 
@@ -178,6 +220,21 @@ const SidePanel = {
                 sendResponse({ success: true });
                 break;
 
+            case 'elementSelected':
+                console.log('Sidepanel Element selected:', message.elementType, this.elements.chatDetectionMessage);
+                this.state.selectedElements[message.elementType] = true;
+                if (message.elementType === 'chatArea' && this.elements.chatDetectionMessage) {
+                    this.elements.chatDetectionMessage.classList.add('hidden');
+                }
+                if (this.state.selectedElements['chatArea'] && this.state.selectedElements['inputArea']) {
+                    console.log('myText element:', this.elements.myText);
+                    console.log('myText tabIndex:', this.elements.myText.tabIndex);
+                    this.elements.myText.focus();
+                    this.elements.myText.scrollIntoView();
+                    
+                }
+                break;
+
             case 'chatMessageDetected':
                 console.log('Received chat message:', message.text.substring(0, 50) + '...');
                 this.updatePartnerText(message.text);
@@ -194,18 +251,24 @@ const SidePanel = {
     },
 
     setupEventListeners() {
+        console.log('Sidepanel setting up event listeners ***', this.state.tabId);
         // UI event listeners
-        window.addEventListener('beforeunload', async () => {
+        // window.addEventListener('beforeunload', async () => {
+        // window.addEventListener('unload', async () => {
+        // chrome.windows.onRemoved.addListener((windowId) => {
+        document.addEventListener('visibilitychange', () => {
             console.log('Sidepanel Sending sidePanelClosed message to tab:', this.state.tabId);
+
             if (this.state.tabId) {
-                try {
-                    await chrome.tabs.sendMessage(this.state.tabId, {
-                        type: 'sidePanelClosed'
-                    });
-                    console.log('Successfully sent sidePanelClosed message');
-                } catch (error) {
-                    console.error('Error sending sidePanelClosed:', error);
-                }
+                chrome.tabs.sendMessage(this.state.tabId, {
+                    type: 'sidePanelClosed'
+                }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        console.log('Error sending sidePanelClosed:', chrome.runtime.lastError);
+                    } else {
+                        console.log('sidePanelClosed message sent successfully:', response);
+                    }
+                });
             }
         });
 
@@ -286,6 +349,8 @@ const SidePanel = {
         console.log('Sidepanel Elements:', this.elements);
         this.state = this.initState();
         console.log('Sidepanel State:', this.state);
+        this.initManualSelectionUI();
+        console.log('Sidepanel Manual selection UI initialized');
         this.initDisplay();
         console.log('Sidepanel Display initialized');
         this.initHistory();
@@ -307,5 +372,6 @@ const SidePanel = {
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('SidePanel loaded');
     SidePanel.init();
 });

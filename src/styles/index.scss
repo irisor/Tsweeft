@@ -1,4 +1,5 @@
-@import "./main";
-@import "./themes";
-@import "./sidepanel";
-@import "./messages";
+@use "./main";
+@use "./variables";
+@use "./themes";
+@use "./sidepanel";
+@use "./messages";
