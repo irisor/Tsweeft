@@ -13,6 +13,10 @@ let permanentHighlighters = {
 };
 let lastChatLength = 0;
 let lastChatMyMessage = '';
+let connectionPort = null;
+const PORT_NAME = 'TsweeftConnection';
+const connectListener = (port) => onConnectListener(port);
+const messageListener = (message) => onMessageListener(message);
 
 // Cleanup function to handle observer disconnection
 function cleanup() {
@@ -42,45 +46,57 @@ function cleanupObserver() {
 setupMessageListeners();
 
 function setupMessageListeners() {
+    chrome.runtime.onConnect.addListener(connectListener);
+    window.addEventListener('beforeunload', onBeforeunload);
+}
+
+function onConnectListener(port) {
+    if (port.name !== PORT_NAME) return
+
+    // Disconnect any existing port
+    if (connectionPort) {
+        connectionPort.disconnect();
+    }
+    connectionPort = port;
 
     // Listen for messages
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    port.onMessage.addListener(messageListener);
 
-        console.log('Content onMessage', message, sender);
-
-        switch (message.type) {
-
-            case "startElementSelection":
-                startElementSelection(message.elementType);
-                sendResponse({ success: true });
-                break;
-
-            case "sidePanelOpened":
-                tabId = message.tabId;
-                if (!tabId) {
-                    console.log('side panel opened without tabId, ignoring');
-                    return;
-                }
-                initElementSelectionUI();
-                cleanup();
-                console.log('Activating observer on this tab.', tabId);
-                break;
-
-            case "sidePanelClosed":
-                console.log('content sidePanelClosed', message);
-                cleanup();
-                break;
-
-            case "injectTextIntoChat":
-                injectTextIntoChat(message.text);
-                sendResponse({ success: true });
-                return true;
-
-            default:
-                console.log('Unrecognized message type:', message.type);
-                break;
-        }
+    port.onDisconnect.addListener(() => {
+        console.log('Port disconnected');
+        chrome.runtime.onMessage.removeListener(onMessageListener);
+        cleanup();
     });
+}
+
+function onMessageListener(message) {
+    console.log('Content onMessage', message);
+
+    switch (message.type) {
+
+        case "startElementSelection":
+            startElementSelection(message.elementType);
+            break;
+
+        case "sidePanelOpened":
+            initElementSelectionUI();
+            cleanup();
+            console.log('Activating observer on this tab.');
+            break;
+
+        case "injectTextIntoChat":
+            injectTextIntoChat(message.text);
+            break;
+
+        default:
+            console.log('Unrecognized message type:', message.type);
+            break;
+    }
+}
+
+function onBeforeunload() {
+    chrome.runtime.onConnect.removeListener(connectListener);
+    window.removeEventListener('beforeunload', onBeforeunload);
 }
 
 function observerElement(targetElement) {
@@ -111,7 +127,7 @@ function observerElement(targetElement) {
             cleanup();
 
             try {
-                chrome.runtime.sendMessage({ type: 'closeSidePanel' });
+                sendMessage({ type: 'closeSidePanel' });
             } catch (error) {
                 console.log('Content attempted to close side panel, but failed:', error);
             }
@@ -128,16 +144,10 @@ function sendChatToSidepanel(text) {
     let newText = text.substring(lastChatLength);
     if (newText) newText = removeStartString(newText, lastChatMyMessage); // Remove my last message
 
-    chrome.runtime.sendMessage({
+    sendMessage({
         type: 'chatMessageDetected',
         tabId: tabId,
         text: newText
-    }, (response) => {
-        if (chrome.runtime.lastError) {
-            console.log('Error in sending chatMessageDetected:', chrome.runtime.lastError.message, tabId, newText);
-        } else {
-            console.log('chatMessageDetected Message sent successfully:', response);
-        }
     });
 }
 
@@ -188,15 +198,6 @@ async function detectChat() {
     console.log('detectChat');
 
     return null;
-}
-
-function getPath(element) {
-    const path = [];
-    while (element) {
-        path.unshift(element);
-        element = element.parentElement;
-    }
-    return path;
 }
 
 // Track changes in the highlighters reference elements, to recalculate the highlighter position and size
@@ -321,7 +322,7 @@ function startElementSelection(elementType) {
         // Clean up selection mode
         cleanupSelection(handleMouseOver, handleMouseOut, handleClick, handleResizeAndScroll);
 
-        chrome.runtime.sendMessage({ type: 'elementSelected', elementType });
+        sendMessage({ type: 'elementSelected', elementType });
         console.log('Element selected:', elementType, target.getBoundingClientRect());
     };
 
@@ -365,6 +366,17 @@ function cleanupSelection(mouseOverHandler, mouseOutHandler, clickHandler, resiz
     isSelectionMode = false;
     if (overlay) {
         overlay.style.pointerEvents = 'auto';
+    }
+}
+
+// Send messages through the port
+function sendMessage(message) {
+    if (!connectionPort) {
+        console.error('Port connection not established');
+        setupMessageListeners();
+    }
+    if (connectionPort) {
+        connectionPort.postMessage(message);
     }
 }
 

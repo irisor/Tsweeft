@@ -4,6 +4,7 @@ import { debounce } from "./utils/timing";
 import { handleUserMessage } from "./utils/userMessageUtil";
 import './styles/index.scss';
 
+const PORT_NAME = 'TsweeftConnection';
 const SidePanel = {
     elements: null,
     state: null,
@@ -50,7 +51,8 @@ const SidePanel = {
             selectedElements: {
                 chatArea: false,
                 inputArea: false
-            }
+            },
+            port: null
         };
     },
 
@@ -68,13 +70,9 @@ const SidePanel = {
 
     startElementSelection(elementType) {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            chrome.tabs.sendMessage(tabs[0].id, {
+            this.sendMessage({
                 type: 'startElementSelection',
                 elementType: elementType
-            }, (response) => {
-                if (response && response.error) {
-                    console.log('Error starting element selection:', response.error);
-                }
             });
         });
     },
@@ -93,16 +91,10 @@ const SidePanel = {
         this.setupMessageListeners();
 
         try {
-            const response = await chrome.tabs.sendMessage(this.state.tabId, {
+            this.sendMessage({
                 type: 'sidePanelOpened',
                 tabId: this.state.tabId
             });
-
-            console.log('sidePanelOpened response:', response);
-            if (!response || !response.success) {
-                console.log('Failed to initialize content script');
-                handleUserMessage('Failed to initialize content script', 'error');
-            }
         } catch (error) {
             console.log('Error in sending sidePanelOpened:', error);
             handleUserMessage('Failed to initialize content script', 'error');
@@ -199,78 +191,75 @@ const SidePanel = {
     },
 
     setupMessageListeners() {
-        // Remove any existing listeners first
-        if (chrome.runtime.onMessage.hasListeners()) {
-            chrome.runtime.onMessage.removeListener(this.messageHandler);
+        // Disconnect any existing port
+        if (this.state.port) {
+            this.state.port.disconnect();
         }
 
-        // Bind the message handler to preserve 'this' context
-        this.messageHandler = this.handleRuntimeMessage.bind(this);
-        chrome.runtime.onMessage.addListener(this.messageHandler);
+        // Create a long-lived connection
+        this.state.port = chrome.tabs.connect(this.state.tabId, { name: PORT_NAME });
 
-        console.log('Side panel message listeners initialized');
+        // Set up port message listener
+        this.state.port.onMessage.addListener((message) => {
+            console.log('Sidepanel received message:', message);
+            this.handlePortMessage(message);
+        });
+
+        // Handle port disconnection
+        this.state.port.onDisconnect.addListener(() => {
+            console.log('Port disconnected');
+            this.cleanup();
+        });
+
+        console.log('Side panel port connection established');
     },
 
-    handleRuntimeMessage(message, sender, sendResponse) {
-        console.log('Sidepanel received message:', message);
-
+    handlePortMessage(message) {
         switch (message.type) {
-            case 'contentScriptReady':
-                console.log('Content script ready confirmation received');
-                sendResponse({ success: true });
-                break;
 
             case 'elementSelected':
                 console.log('Sidepanel Element selected:', message.elementType, this.elements.chatDetectionMessage);
                 this.state.selectedElements[message.elementType] = true;
+
                 if (message.elementType === 'chatArea' && this.elements.chatDetectionMessage) {
                     this.elements.chatDetectionMessage.classList.add('hidden');
                 }
+
                 if (this.state.selectedElements['chatArea'] && this.state.selectedElements['inputArea']) {
                     console.log('myText element:', this.elements.myText);
                     console.log('myText tabIndex:', this.elements.myText.tabIndex);
                     this.elements.myText.focus();
                     this.elements.myText.scrollIntoView();
-                    
                 }
                 break;
 
             case 'chatMessageDetected':
                 console.log('Received chat message:', message.text.substring(0, 50) + '...');
                 this.updatePartnerText(message.text);
-                sendResponse({ success: true });
+                this.sendMessage({ type: 'chatMessageAck', success: true });
                 break;
 
             case 'closeSidePanel':
                 console.log('Closing side panel');
+                this.cleanup();
                 window.close();
                 break;
         }
+    },
 
-        return true; // Keep channel open for async response
+    // Method to send messages through the port
+    sendMessage(message) {
+        if (!this.state.port) {
+            console.error('Port connection not established');
+            this.setupMessageListeners();
+        }
+        if (this.state.port) {
+            this.state.port.postMessage(message);
+        }
     },
 
     setupEventListeners() {
         console.log('Sidepanel setting up event listeners ***', this.state.tabId);
-        // UI event listeners
-        // window.addEventListener('beforeunload', async () => {
-        // window.addEventListener('unload', async () => {
-        // chrome.windows.onRemoved.addListener((windowId) => {
-        document.addEventListener('visibilitychange', () => {
-            console.log('Sidepanel Sending sidePanelClosed message to tab:', this.state.tabId);
-
-            if (this.state.tabId) {
-                chrome.tabs.sendMessage(this.state.tabId, {
-                    type: 'sidePanelClosed'
-                }, (response) => {
-                    if (chrome.runtime.lastError) {
-                        console.log('Error sending sidePanelClosed:', chrome.runtime.lastError);
-                    } else {
-                        console.log('sidePanelClosed message sent successfully:', response);
-                    }
-                });
-            }
-        });
 
         this.elements.myText.addEventListener('input', debounce(async () => {
             console.log('Sidepanel Translating my text:', this.elements.myText.value);
@@ -330,17 +319,33 @@ const SidePanel = {
             console.log('Sidepanel Injecting text into chat:', this.elements.myTranslatedText.value);
             const finalTranslatedText = this.elements.myTranslatedText.value;
             if (finalTranslatedText) {
-                chrome.tabs.sendMessage(this.state.tabId, {
+                this.sendMessage({
                     type: 'injectTextIntoChat',
                     text: finalTranslatedText
-                }).then(() => {
-                    console.log('Text injected successfully');
-                    this.initDisplay();
-                }).catch(error => {
-                    console.error('Error injecting text into chat:', error);
                 });
             }
         }, 500);
+    },
+
+    cleanup() {
+        console.log('Cleaning up port connection');
+
+        // Disconnect port if it exists
+        if (this.state.port) {
+            try {
+                this.state.port.disconnect();
+            } catch (error) {
+                console.error('Error disconnecting port:', error);
+            }
+            this.state.port = null;
+        }
+
+        // Remove event listeners
+        this.elements.myText.removeEventListener('input', this.inputListener);
+        this.elements.sendButton.removeEventListener('click', this.sendButtonListener);
+        this.elements.myText.removeEventListener('keydown', this.keydownListener);
+        this.elements.myLangSelect.removeEventListener('change', this.langSelectListener);
+        this.elements.setLangsBtn.removeEventListener('click', this.setLangsBtnListener);
     },
 
     async init() {
