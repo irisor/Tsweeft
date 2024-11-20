@@ -20,9 +20,11 @@ const SidePanel = {
             myLangSelect: document.getElementById('my-lang'),
             setLangsBtn: document.getElementById('set-langs-btn'),
             partnerText: document.getElementById('partner-text'),
+            partnerTextLocate: document.getElementById('partner-text-locate'),
             translatedPartnerText: document.getElementById('translated-partner-text'),
             myText: document.getElementById('my-text'),
             myTranslatedText: document.getElementById('my-translated-text'),
+            myTranslatedTextLocate: document.getElementById('my-translated-text-locate'),
             sendButton: document.getElementById('send-btn')
         };
     },
@@ -30,6 +32,8 @@ const SidePanel = {
     initManualSelectionUI() {
         this.elements.selectChatArea.addEventListener('click', () => this.startElementSelection('chatArea'));
         this.elements.selectInputArea.addEventListener('click', () => this.startElementSelection('inputArea'));
+        this.elements.partnerTextLocate.addEventListener('click', () => this.startElementSelection('chatArea'));
+        this.elements.myTranslatedTextLocate.addEventListener('click', () => this.startElementSelection('inputArea'));
     },
 
     initState() {
@@ -236,7 +240,6 @@ const SidePanel = {
             case 'chatMessageDetected':
                 console.log('Received chat message:', message.text.substring(0, 50) + '...');
                 this.updatePartnerText(message.text);
-                this.sendMessage({ type: 'chatMessageAck', success: true });
                 break;
 
             case 'closeSidePanel':
@@ -250,7 +253,7 @@ const SidePanel = {
     // Method to send messages through the port
     sendMessage(message) {
         if (!this.state.port) {
-            console.error('Port connection not established');
+            console.log('Port connection not established', message);
             this.setupMessageListeners();
         }
         if (this.state.port) {
@@ -314,10 +317,17 @@ const SidePanel = {
 
         this.state.historyString += partnerTextValue + '\n' + translatedMyText;
 
+        // Copy translatedMyText to clipboard
+        navigator.clipboard.writeText(translatedMyText).then(() => {
+            handleUserMessage('My translated text copied!', 'success');
+        }).catch(err => {
+            console.log('Error copying text to clipboard:', err);
+        });
+
         // Send message to content script
+        const finalTranslatedText = this.elements.myTranslatedText.value;
         setTimeout(() => {
-            console.log('Sidepanel Injecting text into chat:', this.elements.myTranslatedText.value);
-            const finalTranslatedText = this.elements.myTranslatedText.value;
+            console.log('Sidepanel Injecting text into chat:', finalTranslatedText);
             if (finalTranslatedText) {
                 this.sendMessage({
                     type: 'injectTextIntoChat',
@@ -325,6 +335,8 @@ const SidePanel = {
                 });
             }
         }, 500);
+
+        this.initDisplay();
     },
 
     cleanup() {

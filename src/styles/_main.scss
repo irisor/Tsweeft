@@ -13,8 +13,8 @@ body {
 	background-color: var(--background);
 	color: var(--text);
 	font-family: Arial, sans-serif;
+	max-width: 100%;
 	padding: var(--padding-around);
-	width: 350px;
 }
 
 .btn {
@@ -58,7 +58,6 @@ label {
 	top: 5px;
 	right: 5px;
 	display: none;
-	background: transparent;
 	border: none;
 	color: #ccc;
 	cursor: pointer;
