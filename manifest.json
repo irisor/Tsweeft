@@ -9,9 +9,7 @@
 		"sidePanel",
 		"storage"
 	],
-	// "host_permissions": [
-	//   "*://*/*"  // Allows access to all websites (modify this as necessary to limit access to specific domains)
-	// ],
+
 	"background": {
 		"service_worker": "dist/background.js"
 	},
@@ -24,20 +22,20 @@
 	},
 	"content_scripts": [
 		{
-			"matches": ["<all_urls>"], // Inject scripts into all pages 
-			"js": ["dist/content.js"], // The content script that interacts with the DOM (e.g., detecting and injecting into chat elements)
+			"matches": ["<all_urls>"],
+			"js": ["dist/content.js"],
 			"css": ["dist/content.css"],
-			"run_at": "document_end", // Runs when the DOM is fully loaded
-			"all_frames": true // Ensures the script is injected into all iframes on the page
+			"run_at": "document_end",
+			"all_frames": false
 		}
 	],
 	"content_security_policy": {
 		"extension_pages": "script-src 'self'; object-src 'self';"
 	},
 	"icons": {
-	  "16": "public/icons/tsweeft-light.png",
-	  "48": "public/icons/tsweeft-light.png",
-	  "128": "public/icons/tsweeft-light.png"
+	  "16": "public/icons/tsweeft-light-16.png",
+	  "48": "public/icons/tsweeft-light-48.png",
+	  "128": "public/icons/tsweeft-light-128.png"
 	},
 	"web_accessible_resources": [
 		{

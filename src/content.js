@@ -64,7 +64,10 @@ function onConnectListener(port) {
 
     port.onDisconnect.addListener(() => {
         console.log('Port disconnected');
-        chrome.runtime.onMessage.removeListener(onMessageListener);
+        if (connectionPort) {
+            connectionPort.disconnect();
+            connectionPort = null;
+        }
         cleanup();
     });
 }
@@ -95,7 +98,11 @@ function onMessageListener(message) {
 }
 
 function onBeforeunload() {
-    chrome.runtime.onConnect.removeListener(connectListener);
+    if (connectionPort) {
+        connectionPort.onMessage.removeListener(messageListener);
+        connectionPort.disconnect();
+        connectionPort = null;
+    }
     window.removeEventListener('beforeunload', onBeforeunload);
 }
 
@@ -372,7 +379,7 @@ function cleanupSelection(mouseOverHandler, mouseOutHandler, clickHandler, resiz
 // Send messages through the port
 function sendMessage(message) {
     if (!connectionPort) {
-        console.error('Port connection not established');
+        console.log('Port connection not established');
         setupMessageListeners();
     }
     if (connectionPort) {
