@@ -9,6 +9,43 @@ const SidePanel = {
     elements: null,
     state: null,
 
+    // Store references to the event listener functions
+    listeners: {
+        myTextInput: debounce(async () => {
+            console.log('Sidepanel Translating my text:', SidePanel.elements.myText.value);
+            const translated = await TranslationService.translateText(SidePanel.elements.myText.value, false);
+            console.log('Sidepanel Translated my text:', translated);
+            SidePanel.elements.myTranslatedText.value = translated;
+        }, 500),
+    
+        sendButton: () => {
+            console.log('Sending message');
+            SidePanel.handleSend();
+        },
+    
+        myTextKeyDown: (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                SidePanel.elements.sendButton.click();
+            }
+        },
+    
+        myLangSelectChange: (event) => {
+            console.log('Sidepanel My language changed to:', event.target.value);
+            SidePanel.handleMyLangChange(event.target.value);
+        },
+    
+        setLangsBtnClick: () => {
+            console.log('Sidepanel Updating languages');
+            SidePanel.handleLanguageUpdate();
+        },
+
+       selectChatArea: () => { SidePanel.startElementSelection('chatArea') },
+       selectInputArea: () => { SidePanel.startElementSelection('inputArea') },
+       partnerTextLocate: () => { SidePanel.startElementSelection('chatArea') },
+       myTranslatedTextLocate: () => { SidePanel.startElementSelection('inputArea') },
+    },
+
     getElements() {
         return {
             loadingOverlay: document.getElementById('loading-overlay'),
@@ -20,16 +57,20 @@ const SidePanel = {
             myLangSelect: document.getElementById('my-lang'),
             setLangsBtn: document.getElementById('set-langs-btn'),
             partnerText: document.getElementById('partner-text'),
+            partnerTextLocate: document.getElementById('partner-text-locate'),
             translatedPartnerText: document.getElementById('translated-partner-text'),
             myText: document.getElementById('my-text'),
             myTranslatedText: document.getElementById('my-translated-text'),
+            myTranslatedTextLocate: document.getElementById('my-translated-text-locate'),
             sendButton: document.getElementById('send-btn')
         };
     },
 
     initManualSelectionUI() {
-        this.elements.selectChatArea.addEventListener('click', () => this.startElementSelection('chatArea'));
-        this.elements.selectInputArea.addEventListener('click', () => this.startElementSelection('inputArea'));
+        this.elements.selectChatArea.addEventListener('click', this.listeners.selectChatArea );
+        this.elements.selectInputArea.addEventListener('click', this.listeners.selectInputArea );
+        this.elements.partnerTextLocate.addEventListener('click', this.listeners.partnerTextLocate );
+        this.elements.myTranslatedTextLocate.addEventListener('click', this.listeners.myTranslatedTextLocate );
     },
 
     initState() {
@@ -88,7 +129,7 @@ const SidePanel = {
         console.log('Sidepanel tab initialized with Tab ID:', this.state.tabId);
 
         // Set up message listeners before sending initialization message
-        this.setupMessageListeners();
+        this.setupPortListeners();
 
         try {
             this.sendMessage({
@@ -190,7 +231,7 @@ const SidePanel = {
         });
     },
 
-    setupMessageListeners() {
+    setupPortListeners() {
         // Disconnect any existing port
         if (this.state.port) {
             this.state.port.disconnect();
@@ -236,7 +277,6 @@ const SidePanel = {
             case 'chatMessageDetected':
                 console.log('Received chat message:', message.text.substring(0, 50) + '...');
                 this.updatePartnerText(message.text);
-                this.sendMessage({ type: 'chatMessageAck', success: true });
                 break;
 
             case 'closeSidePanel':
@@ -250,8 +290,8 @@ const SidePanel = {
     // Method to send messages through the port
     sendMessage(message) {
         if (!this.state.port) {
-            console.error('Port connection not established');
-            this.setupMessageListeners();
+            console.log('Port connection not established', message);
+            this.setupPortListeners();
         }
         if (this.state.port) {
             this.state.port.postMessage(message);
@@ -261,34 +301,12 @@ const SidePanel = {
     setupEventListeners() {
         console.log('Sidepanel setting up event listeners ***', this.state.tabId);
 
-        this.elements.myText.addEventListener('input', debounce(async () => {
-            console.log('Sidepanel Translating my text:', this.elements.myText.value);
-            const translated = await TranslationService.translateText(this.elements.myText.value, false);
-            console.log('Sidepanel Translated my text:', translated);
-            this.elements.myTranslatedText.value = translated;
-        }, 500));
-
-        this.elements.sendButton?.addEventListener('click', () => {
-            console.log('Sending message');
-            this.handleSend();
-        });
-
-        this.elements.myText.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                this.elements.sendButton.click();
-            }
-        });
-
-        this.elements.myLangSelect.addEventListener('change', (event) => {
-            console.log('Sidepanel My language changed to:', event.target.value);
-            this.handleMyLangChange(event.target.value);
-        });
-
-        this.elements.setLangsBtn.addEventListener('click', () => {
-            console.log('Sidepanel Updating languages');
-            this.handleLanguageUpdate();
-        });
+        // Add event listeners
+        this.elements.myText.addEventListener('input', this.listeners.myTextInput);
+        this.elements.sendButton?.addEventListener('click', this.listeners.sendButton);
+        this.elements.myText.addEventListener('keydown', this.listeners.myTextKeyDown);
+        this.elements.myLangSelect.addEventListener('change', this.listeners.myLangSelectChange);
+        this.elements.setLangsBtn.addEventListener('click', this.listeners.setLangsBtnClick);
 
         // Populate source language select
         getAllLanguages().forEach(lang => {
@@ -314,10 +332,17 @@ const SidePanel = {
 
         this.state.historyString += partnerTextValue + '\n' + translatedMyText;
 
+        // Copy translatedMyText to clipboard
+        navigator.clipboard.writeText(translatedMyText).then(() => {
+            handleUserMessage('My translated text copied!', 'success');
+        }).catch(err => {
+            console.log('Error copying text to clipboard:', err);
+        });
+
         // Send message to content script
+        const finalTranslatedText = this.elements.myTranslatedText.value;
         setTimeout(() => {
-            console.log('Sidepanel Injecting text into chat:', this.elements.myTranslatedText.value);
-            const finalTranslatedText = this.elements.myTranslatedText.value;
+            console.log('Sidepanel Injecting text into chat:', finalTranslatedText);
             if (finalTranslatedText) {
                 this.sendMessage({
                     type: 'injectTextIntoChat',
@@ -325,6 +350,8 @@ const SidePanel = {
                 });
             }
         }, 500);
+
+        this.initDisplay();
     },
 
     cleanup() {
@@ -341,11 +368,18 @@ const SidePanel = {
         }
 
         // Remove event listeners
-        this.elements.myText.removeEventListener('input', this.inputListener);
-        this.elements.sendButton.removeEventListener('click', this.sendButtonListener);
-        this.elements.myText.removeEventListener('keydown', this.keydownListener);
-        this.elements.myLangSelect.removeEventListener('change', this.langSelectListener);
-        this.elements.setLangsBtn.removeEventListener('click', this.setLangsBtnListener);
+        this.elements.myText.removeEventListener('input', this.listeners.myTextInput);
+        this.elements.sendButton?.removeEventListener('click', this.listeners.sendButton);
+        this.elements.myText.removeEventListener('keydown', this.listeners.myTextKeyDown);
+        this.elements.myLangSelect.removeEventListener('change', this.listeners.myLangSelectChange);
+        this.elements.setLangsBtn.removeEventListener('click', this.listeners.setLangsBtnClick);
+
+        this.elements.selectChatArea.removeEventListener('click', this.listeners.selectChatArea);
+        this.elements.selectInputArea.removeEventListener('click', this.listeners.selectInputArea);
+        this.elements.partnerTextLocate.removeEventListener('click', this.listeners.partnerTextLocate);
+        this.elements.myTranslatedTextLocate.removeEventListener('click', this.listeners.myTranslatedTextLocate);
+
+        this.initState();
     },
 
     async init() {
@@ -376,7 +410,9 @@ const SidePanel = {
 };
 
 // Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function initSidePanel() {
     console.log('SidePanel loaded');
     SidePanel.init();
+    document.removeEventListener('DOMContentLoaded', initSidePanel);
 });
+

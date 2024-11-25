@@ -61,7 +61,7 @@
           <select id="partner-lang">
           </select>
         </section>
-        <button id="set-langs-btn" class="btn">
+        <button id="set-langs-btn" class="btn" title="Apply languages change">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"
             class="icon"><!--!Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.-->
             <path
@@ -74,7 +74,7 @@
     <label for="partner-text">Partner Text:</label>
     <section class="partner-text-container hover-btn-container" id="partner-text-container">
       <textarea id="partner-text" class="language-text" rows="5" readonly></textarea>
-      <button class="btn hover-btn partner-text-locate" title="Locate the chat box on the page">
+      <button class="btn hover-btn partner-text-locate" title="Locate the entire chat area on the page" id="partner-text-locate">
         <svg xmlns="http://www.w3.org/2000/svg" class="icon" aria-hidden="true" focusable="false" viewBox="0 0 512 512">
 
           viewBox="0 0 512
@@ -92,9 +92,20 @@
     <textarea id="my-text" class="language-text" rows="5"></textarea>
     <!-- My Translated Text -->
     <label for="my-translated-text">My Translated Text:</label>
-    <textarea id="my-translated-text" class="language-text" rows="5"></textarea>
+    <section class="my-translated-text-container hover-btn-container" id="my-translated-text-container">
+      <textarea id="my-translated-text" class="language-text" rows="5"></textarea>
+      <button class="btn hover-btn my-translated-text-locate" title="Locate the user input area in the chat box" id="my-translated-text-locate">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon" aria-hidden="true" focusable="false" viewBox="0 0 512 512">
+
+          viewBox="0 0 512
+          512"><!--!Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.-->
+          <path
+            d="M256 0c17.7 0 32 14.3 32 32l0 34.7C368.4 80.1 431.9 143.6 445.3 224l34.7 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-34.7 0C431.9 368.4 368.4 431.9 288 445.3l0 34.7c0 17.7-14.3 32-32 32s-32-14.3-32-32l0-34.7C143.6 431.9 80.1 368.4 66.7 288L32 288c-17.7 0-32-14.3-32-32s14.3-32 32-32l34.7 0C80.1 143.6 143.6 80.1 224 66.7L224 32c0-17.7 14.3-32 32-32zM128 256a128 128 0 1 0 256 0 128 128 0 1 0 -256 0zm128-80a80 80 0 1 1 0 160 80 80 0 1 1 0-160z" />
+        </svg>
+      </button>
+    </section>
     <!-- Send Button -->
-    <button id="send-btn" class="btn">Send</button>
+    <button id="send-btn" class="btn" title="Send the text to the chat box, copy the text and clear the side panel">Send</button>
     <!-- Overlay for loading -->
     <div id="loading-overlay" class="loading-overlay hidden">
       <div class="spinner"></div>

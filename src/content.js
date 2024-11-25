@@ -1,7 +1,7 @@
 console.log('Content script loaded');
-let tabId = null;
-let observer = null;
-let isObserving = false;
+let isSidepanelOpen = false;
+let chatObserver = null;
+let isObservingChat = false;
 let chatArea = null;
 let inputArea = null;
 let isSelectionMode = false;
@@ -14,40 +14,90 @@ let permanentHighlighters = {
 let lastChatLength = 0;
 let lastChatMyMessage = '';
 let connectionPort = null;
+let highlighters = [];
+let highlightersObserver = null;
 const PORT_NAME = 'TsweeftConnection';
 const connectListener = (port) => onConnectListener(port);
-const messageListener = (message) => onMessageListener(message);
+const portMessageListener = (message) => onPortMessageListener(message);
+const cleanupController = new AbortController();
+const { signal: cleanupSignal } = cleanupController;
+
+
+setupEventListeners();
+
+
 
 // Cleanup function to handle observer disconnection
 function cleanup() {
+    if (!isSidepanelOpen) return;
+
+    isSidepanelOpen = false;
     lastChatLength = 0;
     lastChatMyMessage = '';
+    chatArea = null;
+    inputArea = null;
+    isSelectionMode = false;
+
+    if (overlay) {
+        overlay.remove();
+        overlay = null;
+    }
 
     // Cleanup permanent highlighter variables and html classes
-    removeHighlighters();
-    Object.keys(permanentHighlighters).forEach((key) => {
-        if (!permanentHighlighters[key]) return;
-        permanentHighlighters[key].remove();
-        permanentHighlighters[key] = null;
-    });
+    try {
+        removeHighlighters();
+    } catch (error) {
+        console.log('Error removing highlighters:', error);
+    }
 
-    cleanupObserver();
-}
+    try {
+        Object.keys(permanentHighlighters).forEach((key) => {
+            if (!permanentHighlighters[key]) return;
+            permanentHighlighters[key].remove();
+            permanentHighlighters[key] = null;
+        });
+    } catch (error) {
+        console.log('Error cleaning up permanent highlighters:', error);
+    }
 
-function cleanupObserver() {
-    if (observer && isObserving) {
-        console.log('Cleaning up observer');
-        observer.disconnect();
-        observer = null;
-        isObserving = false;
+    try {
+        cleanupChatObserver();
+    } catch (error) {
+        console.log('Error cleaning up observer:', error);
+    }
+
+    try {
+        cleanupPort();
+    } catch (error) {
+        console.log('Error cleaning up port:', error);
     }
 }
 
-setupMessageListeners();
+function cleanupPort() {
+    if (connectionPort) {
+        try {
+            connectionPort.onMessage.removeListener(portMessageListener);
+            connectionPort.disconnect();
+        } catch (error) {
+            console.error('Error cleaning up port:', error);
+        } finally {
+            connectionPort = null;
+        }
+    }
+}
 
-function setupMessageListeners() {
+function cleanupChatObserver() {
+    if (chatObserver && isObservingChat) {
+        console.log('Cleaning up observer');
+        chatObserver.disconnect();
+        chatObserver = null;
+        isObservingChat = false;
+    }
+}
+
+function setupEventListeners() {
     chrome.runtime.onConnect.addListener(connectListener);
-    window.addEventListener('beforeunload', onBeforeunload);
+    window.addEventListener('beforeunload', onBeforeunload, { signal: cleanupSignal });
 }
 
 function onConnectListener(port) {
@@ -60,16 +110,17 @@ function onConnectListener(port) {
     connectionPort = port;
 
     // Listen for messages
-    port.onMessage.addListener(messageListener);
+    port.onMessage.addListener(portMessageListener);
 
     port.onDisconnect.addListener(() => {
         console.log('Port disconnected');
-        chrome.runtime.onMessage.removeListener(onMessageListener);
+        document.dispatchEvent(new CustomEvent('sidePanelClosed', { detail: {} }));
         cleanup();
+        cleanupController.abort();
     });
 }
 
-function onMessageListener(message) {
+function onPortMessageListener(message) {
     console.log('Content onMessage', message);
 
     switch (message.type) {
@@ -81,6 +132,8 @@ function onMessageListener(message) {
         case "sidePanelOpened":
             initElementSelectionUI();
             cleanup();
+            isSidepanelOpen = true;
+            trackHighlighters();
             console.log('Activating observer on this tab.');
             break;
 
@@ -95,12 +148,17 @@ function onMessageListener(message) {
 }
 
 function onBeforeunload() {
-    chrome.runtime.onConnect.removeListener(connectListener);
-    window.removeEventListener('beforeunload', onBeforeunload);
+    try {
+        sendPortMessage({ type: 'closeSidePanel' });
+    } catch (error) {
+        console.log('Content attempted to close side panel, but failed:', error);
+    }
+    cleanup();
+    cleanupController.abort();
 }
 
-function observerElement(targetElement) {
-    console.log('Content.js observerElement', targetElement);
+function chatObserverElement(targetElement) {
+    console.log('Content.js chatObserverElement', targetElement);
 
     if (!targetElement) {
         console.log('Messages to translate not found');
@@ -111,27 +169,15 @@ function observerElement(targetElement) {
 
     // Observer setup
     if (targetElement) {
-        observer = new MutationObserver(debounce((mutations) => {
+        chatObserver = new MutationObserver(debounce((mutations) => {
             if (mutations.some(m => m.type === 'childList' || m.type === 'characterData')) {
                 sendChatToSidepanel(targetElement.innerText);
             }
         }, 500));
 
-        observer.observe(targetElement, { childList: true, subtree: true });
-        isObserving = true;
-        console.log('Observer initialized for inputMessage.');
-
-        // Clean up observer on unload
-        window.addEventListener('beforeunload', () => {
-            console.log('content before unload, observer=', observer, isObserving);
-            cleanup();
-
-            try {
-                sendMessage({ type: 'closeSidePanel' });
-            } catch (error) {
-                console.log('Content attempted to close side panel, but failed:', error);
-            }
-        });
+        chatObserver.observe(targetElement, { childList: true, subtree: true });
+        isObservingChat = true;
+        console.log('Chat Observer initialized for inputMessage.');
     } else {
         console.warn('No input message found to observe.');
     }
@@ -144,9 +190,8 @@ function sendChatToSidepanel(text) {
     let newText = text.substring(lastChatLength);
     if (newText) newText = removeStartString(newText, lastChatMyMessage); // Remove my last message
 
-    sendMessage({
+    sendPortMessage({
         type: 'chatMessageDetected',
-        tabId: tabId,
         text: newText
     });
 }
@@ -200,17 +245,18 @@ async function detectChat() {
     return null;
 }
 
-// Track changes in the highlighters reference elements, to recalculate the highlighter position and size
-const highlighters = [];
-const debouncedObserverCallback = debounce((mutations) => {
-    mutations.forEach((mutation) => {
-        const highlighter = highlighters.find((highlighter) => highlighter.referenceElement === mutation.target);
-        if (highlighter) {
-            updateHighlighterPosition(highlighter);
-        }
-    });
-}, 500);
-const mutationObserver = new MutationObserver(debouncedObserverCallback);
+function trackHighlighters() {
+    // Track changes in the highlighters reference elements, to recalculate the highlighter position and size
+    const debouncedObserverCallback = debounce((mutations) => {
+        mutations.forEach((mutation) => {
+            const highlighter = highlighters.find((highlighter) => highlighter.referenceElement === mutation.target);
+            if (highlighter) {
+                updateHighlighterPosition(highlighter);
+            }
+        });
+    }, 500);
+    highlightersObserver = new MutationObserver(debouncedObserverCallback);
+}
 
 function createHighlighter(className, referenceElement = null) {
     const highlighter = document.createElement('div');
@@ -218,7 +264,7 @@ function createHighlighter(className, referenceElement = null) {
     if (referenceElement) {
         highlighter.referenceElement = referenceElement;
         highlighters.push(highlighter);
-        mutationObserver.observe(highlighter.referenceElement, {
+        highlightersObserver.observe(highlighter.referenceElement, {
             childList: true,
             subtree: true,
         });
@@ -229,11 +275,13 @@ function createHighlighter(className, referenceElement = null) {
 
 function removeHighlighters() {
     const highlighters = document.querySelectorAll('.element-highlighter');
-    mutationObserver.disconnect();
+    if (highlightersObserver) highlightersObserver.disconnect();
 
     for (const highlighter of highlighters) {
         highlighter.remove();
     }
+
+    highlighters.length = 0;
 }
 
 function updateHighlighterPosition(highlighter) {
@@ -252,6 +300,9 @@ function updateHighlighterPosition(highlighter) {
 }
 
 function startElementSelection(elementType) {
+    const cleanupSelectionController = new AbortController();
+    const { signal: cleanupSelectionSignal } = cleanupSelectionController;
+
     // Clean up any existing selection mode
     if (isSelectionMode) {
         cleanupSelection();
@@ -295,7 +346,7 @@ function startElementSelection(elementType) {
         // Remove previous permanent highlighter for this element type if it exists
         if (permanentHighlighters[elementType]) {
             permanentHighlighters[elementType].remove();
-            mutationObserver.disconnect(permanentHighlighters[elementType].referenceElement);
+            highlightersObserver.disconnect(permanentHighlighters[elementType].referenceElement);
         }
 
         // Create new permanent highlighter
@@ -305,8 +356,8 @@ function startElementSelection(elementType) {
         // Update stored element reference
         if (elementType === 'chatArea') {
             chatArea = target;
-            cleanupObserver();
-            observerElement(chatArea);
+            cleanupChatObserver();
+            chatObserverElement(chatArea);
         } else {
             inputArea = target;
             let inputOrTextarea = inputArea.querySelector('input, textarea');
@@ -320,9 +371,9 @@ function startElementSelection(elementType) {
         }
 
         // Clean up selection mode
-        cleanupSelection(handleMouseOver, handleMouseOut, handleClick, handleResizeAndScroll);
+        cleanupSelection(cleanupSelectionController, handleMouseOver, handleMouseOut, handleClick, handleResizeAndScroll);
 
-        sendMessage({ type: 'elementSelected', elementType });
+        sendPortMessage({ type: 'elementSelected', elementType });
         console.log('Element selected:', elementType, target.getBoundingClientRect());
     };
 
@@ -335,45 +386,46 @@ function startElementSelection(elementType) {
     }, 100);
 
     // Use capturing phase for events
-    document.addEventListener('mouseover', handleMouseOver, true);
-    document.addEventListener('mouseout', handleMouseOut, true);
-    document.addEventListener('click', handleClick, true);
-    window.addEventListener('resize', handleResizeAndScroll, false);
-    document.addEventListener('scroll', handleResizeAndScroll, false);
-}
+    document.addEventListener('mouseover', handleMouseOver, { capture: true, signal: cleanupSelectionSignal });
+    document.addEventListener('mouseout', handleMouseOut, { capture: true, signal: cleanupSelectionSignal });
+    document.addEventListener('click', handleClick, { capture: true, signal: cleanupSelectionSignal });
 
-function cleanupSelection(mouseOverHandler, mouseOutHandler, clickHandler, resizeAndScrollHandler) {
-    if (mouseOverHandler) {
-        document.removeEventListener('mouseover', mouseOverHandler, true);
-    }
-    if (mouseOutHandler) {
-        document.removeEventListener('mouseout', mouseOutHandler, true);
-    }
-    if (clickHandler) {
-        document.removeEventListener('click', clickHandler, true);
-    }
+    // These events are used to update the highlighter position
+    // They use the cleanupSignal and not the cleanupSelectionSignal because they should'nt be cleaned up
+    // when the selection mode is closed
+    window.addEventListener('resize', handleResizeAndScroll, { passive: true, signal: cleanupSignal });
+    document.addEventListener('scroll', handleResizeAndScroll, { passive: true, signal: cleanupSignal });
 
-    if (resizeAndScrollHandler) {
-        window.removeEventListener('resize', resizeAndScrollHandler, true);
-        document.removeEventListener('scroll', resizeAndScrollHandler, true);
-    }
+    window.addEventListener('beforeunload', () => {
+        cleanupSelection(cleanupSelectionController, handleMouseOver, handleMouseOut, handleClick, handleResizeAndScroll);
+    }, { once: true, signal: cleanupSelectionSignal });
 
-    if (activeHighlighter) {
-        activeHighlighter.remove();
-        activeHighlighter = null;
-    }
+    document.addEventListener('sidePanelClosed', () => {
+        console.log('StartElementSelection Sidepanel closed');
+        cleanupSelection(cleanupSelectionController, handleMouseOver, handleMouseOut, handleClick, handleResizeAndScroll);
+    }, { once: true, signal: cleanupSelectionSignal });
 
-    isSelectionMode = false;
-    if (overlay) {
-        overlay.style.pointerEvents = 'auto';
+
+    function cleanupSelection(cleanupSelectionController, mouseOverHandler, mouseOutHandler, clickHandler, resizeAndScrollHandler) {
+        cleanupSelectionController.abort();
+
+        if (activeHighlighter) {
+            activeHighlighter.remove();
+            activeHighlighter = null;
+        }
+
+        isSelectionMode = false;
+        if (overlay) {
+            overlay.style.pointerEvents = 'auto';
+        }
     }
 }
 
 // Send messages through the port
-function sendMessage(message) {
+function sendPortMessage(message) {
     if (!connectionPort) {
-        console.error('Port connection not established');
-        setupMessageListeners();
+        console.log('Port connection not established');
+        setupEventListeners();
     }
     if (connectionPort) {
         connectionPort.postMessage(message);

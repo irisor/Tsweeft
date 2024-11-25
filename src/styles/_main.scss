@@ -13,8 +13,9 @@ body {
 	background-color: var(--background);
 	color: var(--text);
 	font-family: Arial, sans-serif;
+	interpolate-size: allow-keywords;
+	max-width: 100%;
 	padding: var(--padding-around);
-	width: 350px;
 }
 
 .btn {
@@ -58,7 +59,6 @@ label {
 	top: 5px;
 	right: 5px;
 	display: none;
-	background: transparent;
 	border: none;
 	color: #ccc;
 	cursor: pointer;
@@ -74,11 +74,26 @@ label {
 }
 
 details {
+	&::details-content {
+		block-size: 0;
+		overflow: hidden;
+		transition: block-size 0.5s ease, content-visibility 0.5s ease;
+		transition-behavior: allow-discrete;
+	}
+
+	&[open]::details-content {
+		block-size: auto;
+	}
+
 	summary {
 		cursor: pointer;
 		font-size: 1.2em;
 
-		+ * {
+		&::marker {
+			color: var(--accent);
+		}
+
+		+* {
 			line-height: 1.5;
 			padding: var(--padding-around);
 			padding-inline-end: 0;
