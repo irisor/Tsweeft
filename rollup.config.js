@@ -13,12 +13,11 @@ export default {
   output: {
     dir: 'dist',                      // Output directory for bundled files
     format: 'esm',                    // Use ES module format
-    // assetFileNames: '[name][extname]' // Removes the hash from the asset filename
   },
   plugins: [
     resolve(),                        // Resolves modules from node_modules
     commonjs(),                       // Converts CommonJS modules to ES6
-    // terser(),                         // Minifies the code
+    terser(),                         // Minifies the code
     sass({
       output: 'dist/styles.css',     // Specifies the output CSS file
       options: { sourceMap: true },  // Disables source maps (optional)
