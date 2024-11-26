@@ -51,6 +51,11 @@ export const TranslationService = {
     async translateText(text, isPartnerToMy = false) {
         const translator = isPartnerToMy ? this.partnerToMyTranslator : this.myToPartnerTranslator;
         if (!translator) return '';
-        return await translator.translate(text);
+        try {
+            return await translator.translate(text);
+        } catch (error) {
+            console.log('Translation error:', error);
+            return '';
+        }
     }
 };
