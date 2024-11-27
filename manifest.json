@@ -1,47 +1,51 @@
 {
-	"manifest_version": 3,
-	"name": "Tsweeft - Chat Translator Extension",
-	"version": "1.0",
-	"description": "A chat helper for multi-language communication",
-	"permissions": [
-		"activeTab",
-		"scripting",
-		"sidePanel",
-		"storage"
-	],
-	"background": {
-		"service_worker": "dist/background.js",
-		"type": "module"
-	},
-	"action": {
-		"default_icon": "public/icons/tsweeft-light.png",
-		"default_title": "Tsweeft"
-	},
-	"side_panel": {
-		"default_path": "public/sidepanel.html"
-	},
-	"content_scripts": [
-		{
-			"matches": ["<all_urls>"],
-			"js": ["dist/content.js"],
-			"css": ["dist/content.css"],
-			"run_at": "document_end",
-			"all_frames": false
-		}
-	],
-	"content_security_policy": {
-		"extension_pages": "script-src 'self'; object-src 'self';"
-	},
-	"icons": {
-	  "16": "public/icons/tsweeft-light-16.png",
-	  "48": "public/icons/tsweeft-light-48.png",
-	  "128": "public/icons/tsweeft-light-128.png"
-	},
-	"web_accessible_resources": [
-		{
-			"resources": ["dist/content.css"],
-			"matches": ["<all_urls>"]
-		}
-	],
-	"trial_tokens": ["AgwPQ+O+qYRchz3tTwZNmCfbhf37YvkI8ZtVurT6AX9uhkXG/CPvJiADZT4h4Sp0PTocL5nkLJ7Tb1EK/qyZpw0AAABveyJvcmlnaW4iOiJjaHJvbWUtZXh0ZW5zaW9uOi8vZG5jZGpwZ2pmZmJqZnBtY2Jtam9rbXBoZ2ZubGhla2EiLCJmZWF0dXJlIjoiVHJhbnNsYXRpb25BUEkiLCJleHBpcnkiOjE3NTMxNDI0MDB9"]
+  "manifest_version": 3,
+  "name": "Tsweeft - Chat Translator Extension",
+  "version": "1.0",
+  "description": "A chat helper for multi-language communication",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "sidePanel",
+    "storage"
+  ],
+  "background": {
+    "service_worker": "dist/background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_icon": "public/icons/tsweeft-light.png",
+    "default_title": "Tsweeft"
+  },
+  "side_panel": {
+    "default_path": "public/sidepanel.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["dist/content.js"],
+      "css": ["dist/content.css"],
+      "run_at": "document_end",
+      "all_frames": false,
+      "type": "module"
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  },
+  "icons": {
+    "16": "public/icons/tsweeft-light-16.png",
+    "48": "public/icons/tsweeft-light-48.png",
+    "128": "public/icons/tsweeft-light-128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "dist/content.css",
+        "dist/logger.js"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "trial_tokens": ["AgwPQ+O+qYRchz3tTwZNmCfbhf37YvkI8ZtVurT6AX9uhkXG/CPvJiADZT4h4Sp0PTocL5nkLJ7Tb1EK/qyZpw0AAABveyJvcmlnaW4iOiJjaHJvbWUtZXh0ZW5zaW9uOi8vZG5jZGpwZ2pmZmJqZnBtY2Jtam9rbXBoZ2ZubGhla2EiLCJmZWF0dXJlIjoiVHJhbnNsYXRpb25BUEkiLCJleHBpcnkiOjE3NTMxNDI0MDB9"]
 }

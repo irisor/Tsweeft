@@ -1,10 +1,13 @@
-console.log('Background script loaded');
+import { Logger, LogLevel } from './utils/logger';
+Logger.info('Background script loaded');
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
-chrome.runtime.onInstalled.addListener((details) => {
-    if (details.reason === 'install') {
-        console.log('Background - Fresh installation detected');
-        // Add your initialization code here
-    } else if (details.reason === 'update') {
-        console.log('Background - Extension updated from version', details.previousVersion);
-    }
-});
+if (Logger.level === LogLevel.DEBUG) {
+    chrome.runtime.onInstalled.addListener((details) => {
+        if (details.reason === 'install') {
+            Logger.debug('Background - Fresh installation detected');
+            // Add your initialization code here
+        } else if (details.reason === 'update') {
+            Logger.debug('Background - Extension updated from version', details.previousVersion);
+        }
+    });
+}

@@ -1,4 +1,6 @@
-console.log('Content script loaded');
+import { Logger } from "./utils/logger";
+
+Logger.info('Content script loaded');
 let isSidepanelOpen = false;
 let chatObserver = null;
 let isObservingChat = false;
@@ -26,7 +28,6 @@ const { signal: cleanupSignal } = cleanupController;
 setupEventListeners();
 
 
-
 // Cleanup function to handle observer disconnection
 function cleanup() {
     if (!isSidepanelOpen) return;
@@ -47,7 +48,7 @@ function cleanup() {
     try {
         removeHighlighters();
     } catch (error) {
-        console.log('Error removing highlighters:', error);
+        Logger.warn('Error removing highlighters:', error);
     }
 
     try {
@@ -57,19 +58,19 @@ function cleanup() {
             permanentHighlighters[key] = null;
         });
     } catch (error) {
-        console.log('Error cleaning up permanent highlighters:', error);
+        Logger.warn('Error cleaning up permanent highlighters:', error);
     }
 
     try {
         cleanupChatObserver();
     } catch (error) {
-        console.log('Error cleaning up observer:', error);
+        Logger.warn('Error cleaning up observer:', error);
     }
 
     try {
         cleanupPort();
     } catch (error) {
-        console.log('Error cleaning up port:', error);
+        Logger.warn('Error cleaning up port:', error);
     }
 }
 
@@ -79,7 +80,7 @@ function cleanupPort() {
             connectionPort.onMessage.removeListener(portMessageListener);
             connectionPort.disconnect();
         } catch (error) {
-            console.error('Error cleaning up port:', error);
+            Logger.warn('Error cleaning up port:', error);
         } finally {
             connectionPort = null;
         }
@@ -88,7 +89,7 @@ function cleanupPort() {
 
 function cleanupChatObserver() {
     if (chatObserver && isObservingChat) {
-        console.log('Cleaning up observer');
+        Logger.debug('Cleaning up observer');
         chatObserver.disconnect();
         chatObserver = null;
         isObservingChat = false;
@@ -113,7 +114,7 @@ function onConnectListener(port) {
     port.onMessage.addListener(portMessageListener);
 
     port.onDisconnect.addListener(() => {
-        console.log('Port disconnected');
+        Logger.debug('Port disconnected');
         document.dispatchEvent(new CustomEvent('sidePanelClosed', { detail: {} }));
         cleanup();
         cleanupController.abort();
@@ -121,7 +122,7 @@ function onConnectListener(port) {
 }
 
 function onPortMessageListener(message) {
-    console.log('Content onMessage', message);
+    Logger.debug('Content onMessage', message);
 
     switch (message.type) {
 
@@ -134,7 +135,7 @@ function onPortMessageListener(message) {
             cleanup();
             isSidepanelOpen = true;
             trackHighlighters();
-            console.log('Activating observer on this tab.');
+            Logger.info('Activating observer on this tab.');
             break;
 
         case "injectTextIntoChat":
@@ -142,7 +143,7 @@ function onPortMessageListener(message) {
             break;
 
         default:
-            console.log('Unrecognized message type:', message.type);
+            Logger.warn('Unrecognized message type:', message.type);
             break;
     }
 }
@@ -151,17 +152,15 @@ function onBeforeunload() {
     try {
         sendPortMessage({ type: 'closeSidePanel' });
     } catch (error) {
-        console.log('Content attempted to close side panel, but failed:', error);
+        Logger.warn('Content attempted to close side panel, but failed:', error);
     }
     cleanup();
     cleanupController.abort();
 }
 
 function chatObserverElement(targetElement) {
-    console.log('Content.js chatObserverElement', targetElement);
-
     if (!targetElement) {
-        console.log('Messages to translate not found');
+        Logger.info('Messages to translate not found');
         return;
     }
 
@@ -177,9 +176,9 @@ function chatObserverElement(targetElement) {
 
         chatObserver.observe(targetElement, { childList: true, subtree: true });
         isObservingChat = true;
-        console.log('Chat Observer initialized for inputMessage.');
+        Logger.debug('Chat Observer initialized for inputMessage.');
     } else {
-        console.warn('No input message found to observe.');
+        Logger.info('No input message found to observe.');
     }
 }
 
@@ -224,7 +223,7 @@ function injectTextIntoChat(translatedText) {
 async function initElementSelectionUI() {
     createOverlay();
     const chatElements = await detectChat();
-    console.log('Chat elements detected:', chatElements);
+    Logger.debug('Chat elements detected:', chatElements);
 
     if (chatElements) {
         chatArea = chatElements.chatArea;
@@ -240,7 +239,7 @@ function createOverlay() {
 }
 
 async function detectChat() {
-    console.log('detectChat');
+    Logger.debug('detectChat');
 
     return null;
 }
@@ -281,7 +280,7 @@ function removeHighlighters() {
         highlighter.remove();
     }
 
-    highlighters.length = 0;
+    if (highlighters && highlighters.length) highlighters.length = 0;
 }
 
 function updateHighlighterPosition(highlighter) {
@@ -374,7 +373,6 @@ function startElementSelection(elementType) {
         cleanupSelection(cleanupSelectionController, handleMouseOver, handleMouseOut, handleClick, handleResizeAndScroll);
 
         sendPortMessage({ type: 'elementSelected', elementType });
-        console.log('Element selected:', elementType, target.getBoundingClientRect());
     };
 
     const handleResizeAndScroll = debounce(() => {
@@ -401,7 +399,7 @@ function startElementSelection(elementType) {
     }, { once: true, signal: cleanupSelectionSignal });
 
     document.addEventListener('sidePanelClosed', () => {
-        console.log('StartElementSelection Sidepanel closed');
+        Logger.debug('StartElementSelection Sidepanel closed');
         cleanupSelection(cleanupSelectionController, handleMouseOver, handleMouseOut, handleClick, handleResizeAndScroll);
     }, { once: true, signal: cleanupSelectionSignal });
 
@@ -424,7 +422,7 @@ function startElementSelection(elementType) {
 // Send messages through the port
 function sendPortMessage(message) {
     if (!connectionPort) {
-        console.log('Port connection not established');
+        Logger.info('Port connection not established');
         setupEventListeners();
     }
     if (connectionPort) {
