@@ -3,6 +3,7 @@ import commonjs from '@rollup/plugin-commonjs';
 import terser from "@rollup/plugin-terser";
 import sass from 'rollup-plugin-sass';
 import copy from 'rollup-plugin-copy';
+import del from 'rollup-plugin-delete';
 
 // Shared plugins configuration
 const sharedPlugins = [
@@ -21,6 +22,11 @@ export default [
       name: 'sidepanel'
     },
     plugins: [
+      del({ 
+        targets: 'dist/*',
+        hook: 'buildStart',
+        runOnce: true 
+      }),
       ...sharedPlugins,
       sass({
         output: 'dist/styles.css',

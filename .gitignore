@@ -32,3 +32,6 @@ Thumbs.db
 
 # ignore vs code settings
 .vscode/
+
+# ignore extension.zip
+extension.zip
