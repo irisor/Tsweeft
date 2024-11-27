@@ -2,6 +2,7 @@
   "manifest_version": 3,
   "name": "Tsweeft - Chat Translator Extension",
   "version": "1.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1+r/GaaO2iXKBQ9fMoXfmWi6formqCOalXXc2gIVcXVh+haxKq9ZfC1Fh4QQC6yCg+DvN8yyv2q+SI5ROkBSpAptNmKkokLphAwwCs8tFsf/byNrYPEROYcpCsgti33gi8zIrz92eljUBpj1EH2KuD0qLtYQ3f49gjHOf6k/IxkWUWqGMWgCQT/Qn+CozEinxk2CxywByWMyuLsMU+VbY7KFOh8NedSdmS8D5JEvdn9BhArqRHBP16sYN3bQFaMiCSsTJzFU0bYcBJijWsFVnoIpuuTCoE+L76uMr2xyt7a8iN0iDfHKnOE64RT2levGdHTuYW9rVfjQhpSurvu41wIDAQAB",
   "description": "A chat helper for multi-language communication",
   "permissions": [
     "activeTab",
@@ -47,5 +48,5 @@
       "matches": ["<all_urls>"]
     }
   ],
-  "trial_tokens": ["AgwPQ+O+qYRchz3tTwZNmCfbhf37YvkI8ZtVurT6AX9uhkXG/CPvJiADZT4h4Sp0PTocL5nkLJ7Tb1EK/qyZpw0AAABveyJvcmlnaW4iOiJjaHJvbWUtZXh0ZW5zaW9uOi8vZG5jZGpwZ2pmZmJqZnBtY2Jtam9rbXBoZ2ZubGhla2EiLCJmZWF0dXJlIjoiVHJhbnNsYXRpb25BUEkiLCJleHBpcnkiOjE3NTMxNDI0MDB9"]
+  "trial_tokens": ["AsyPhtcqHuCWajVSo+Y8yIWNN8XP8RnWnIH3lNnQd9Sg9fmMxwdzBtgFN6O/yHWZYNk8FfKygC14BYjvy1cbuQ8AAABveyJvcmlnaW4iOiJjaHJvbWUtZXh0ZW5zaW9uOi8vYmZwZ25pZG9vZG1pYWZiam5hbGhqYWhhcGFnb2ViaWMiLCJmZWF0dXJlIjoiVHJhbnNsYXRpb25BUEkiLCJleHBpcnkiOjE3NTMxNDI0MDB9"]
 }

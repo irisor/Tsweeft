@@ -6,7 +6,7 @@ const LogLevel = {
 };
 
 class Logger {
-    static level = LogLevel.ERROR;
+    static level = LogLevel.WARN;
 
     static setLevel(level) {
         if (Object.values(LogLevel).includes(level)) {
