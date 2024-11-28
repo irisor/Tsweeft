@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "build": "rollup -c",
-    "watch": "rollup -c -w"
+    "watch": "rollup -c -w",
+    "package": "npm run build && node scripts/package.js"
   },
   "author": "Iris Oron",
   "license": "GPL-3.0",
@@ -14,11 +15,11 @@
     "@rollup/plugin-commonjs": "^28.0.1",
     "@rollup/plugin-node-resolve": "^15.3.0",
     "@rollup/plugin-terser": "^0.4.4",
+    "archiver": "^7.0.1",
     "rollup": "^4.24.3",
+    "rollup-plugin-copy": "^3.5.0",
+    "rollup-plugin-delete": "^2.1.0",
     "rollup-plugin-sass": "^1.14.0",
     "sass": "^1.80.5"
-  },
-  "dependencies": {
-    "rollup-plugin-copy": "^3.5.0"
   }
 }

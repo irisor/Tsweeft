@@ -1,46 +1,52 @@
 {
-	"manifest_version": 3,
-	"name": "Tsweeft - Chat Translator Extension",
-	"version": "1.0",
-	"description": "A Chrome extension that translates chat messages between two languages and allows users to interact with chatbots on various websites.",
-	"permissions": [
-		"activeTab",
-		"scripting",
-		"sidePanel",
-		"storage"
-	],
-
-	"background": {
-		"service_worker": "dist/background.js"
-	},
-	"action": {
-		"default_icon": "public/icons/tsweeft-light.png",
-		"default_title": "Tsweeft"
-	},
-	"side_panel": {
-		"default_path": "public/sidepanel.html"
-	},
-	"content_scripts": [
-		{
-			"matches": ["<all_urls>"],
-			"js": ["dist/content.js"],
-			"css": ["dist/content.css"],
-			"run_at": "document_end",
-			"all_frames": false
-		}
-	],
-	"content_security_policy": {
-		"extension_pages": "script-src 'self'; object-src 'self';"
-	},
-	"icons": {
-	  "16": "public/icons/tsweeft-light-16.png",
-	  "48": "public/icons/tsweeft-light-48.png",
-	  "128": "public/icons/tsweeft-light-128.png"
-	},
-	"web_accessible_resources": [
-		{
-			"resources": ["dist/content.css"],
-			"matches": ["<all_urls>"]
-		}
-	]
+  "manifest_version": 3,
+  "name": "Tsweeft - Chat Translator Extension",
+  "version": "1.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1+r/GaaO2iXKBQ9fMoXfmWi6formqCOalXXc2gIVcXVh+haxKq9ZfC1Fh4QQC6yCg+DvN8yyv2q+SI5ROkBSpAptNmKkokLphAwwCs8tFsf/byNrYPEROYcpCsgti33gi8zIrz92eljUBpj1EH2KuD0qLtYQ3f49gjHOf6k/IxkWUWqGMWgCQT/Qn+CozEinxk2CxywByWMyuLsMU+VbY7KFOh8NedSdmS8D5JEvdn9BhArqRHBP16sYN3bQFaMiCSsTJzFU0bYcBJijWsFVnoIpuuTCoE+L76uMr2xyt7a8iN0iDfHKnOE64RT2levGdHTuYW9rVfjQhpSurvu41wIDAQAB",
+  "description": "A chat helper for multi-language communication",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "sidePanel",
+    "storage"
+  ],
+  "background": {
+    "service_worker": "dist/background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_icon": "public/icons/tsweeft-light.png",
+    "default_title": "Tsweeft"
+  },
+  "side_panel": {
+    "default_path": "public/sidepanel.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["dist/content.js"],
+      "css": ["dist/content.css"],
+      "run_at": "document_end",
+      "all_frames": false,
+      "type": "module"
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  },
+  "icons": {
+    "16": "public/icons/tsweeft-light-16.png",
+    "48": "public/icons/tsweeft-light-48.png",
+    "128": "public/icons/tsweeft-light-128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "dist/content.css",
+        "dist/logger.js"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "trial_tokens": ["AsyPhtcqHuCWajVSo+Y8yIWNN8XP8RnWnIH3lNnQd9Sg9fmMxwdzBtgFN6O/yHWZYNk8FfKygC14BYjvy1cbuQ8AAABveyJvcmlnaW4iOiJjaHJvbWUtZXh0ZW5zaW9uOi8vYmZwZ25pZG9vZG1pYWZiam5hbGhqYWhhcGFnb2ViaWMiLCJmZWF0dXJlIjoiVHJhbnNsYXRpb25BUEkiLCJleHBpcnkiOjE3NTMxNDI0MDB9"]
 }

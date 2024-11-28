@@ -2,6 +2,7 @@ import { getAllLanguages, getDisplayName, getTargetLanguages } from "./utils/lan
 import { TranslationService } from "./services/translation.service";
 import { debounce } from "./utils/timing";
 import { handleUserMessage } from "./utils/userMessageUtil";
+import { Logger } from "./utils/logger";
 import './styles/index.scss';
 
 const PORT_NAME = 'TsweeftConnection';
@@ -12,14 +13,12 @@ const SidePanel = {
     // Store references to the event listener functions
     listeners: {
         myTextInput: debounce(async () => {
-            console.log('Sidepanel Translating my text:', SidePanel.elements.myText.value);
             const translated = await TranslationService.translateText(SidePanel.elements.myText.value, false);
-            console.log('Sidepanel Translated my text:', translated);
             SidePanel.elements.myTranslatedText.value = translated;
         }, 500),
     
         sendButton: () => {
-            console.log('Sending message');
+            Logger.debug('Sending message');
             SidePanel.handleSend();
         },
     
@@ -31,12 +30,10 @@ const SidePanel = {
         },
     
         myLangSelectChange: (event) => {
-            console.log('Sidepanel My language changed to:', event.target.value);
             SidePanel.handleMyLangChange(event.target.value);
         },
     
         setLangsBtnClick: () => {
-            console.log('Sidepanel Updating languages');
             SidePanel.handleLanguageUpdate();
         },
 
@@ -121,12 +118,12 @@ const SidePanel = {
     async initializeTab() {
         const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
         if (tabs.length === 0) {
-            console.error('No active tab found.');
+            Logger.warn('No active tab found.');
             return;
         }
 
         this.state.tabId = tabs[0].id;
-        console.log('Sidepanel tab initialized with Tab ID:', this.state.tabId);
+        Logger.debug('Sidepanel tab initialized with Tab ID:', this.state.tabId);
 
         // Set up message listeners before sending initialization message
         this.setupPortListeners();
@@ -137,7 +134,7 @@ const SidePanel = {
                 tabId: this.state.tabId
             });
         } catch (error) {
-            console.log('Error in sending sidePanelOpened:', error);
+            Logger.warn('Error in sending sidePanelOpened:', error);
             handleUserMessage('Failed to initialize content script', 'error');
         }
     },
@@ -208,7 +205,7 @@ const SidePanel = {
             );
         } catch (error) {
             handleUserMessage('Error updating languages', 'error');
-            console.error('Error updating languages:', error);
+            Logger.warn('Error updating languages:', error);
             return;
         } finally {
             this.elements.loadingOverlay.classList.add('hidden');
@@ -219,7 +216,7 @@ const SidePanel = {
             const translated = await TranslationService.translateText(this.elements.myText.value, false);
             this.elements.myTranslatedText.value = translated;
         } catch (error) {
-            console.log('Error translating text:', error);
+            Logger.warn('Error translating text:', error);
         }
     },
 
@@ -242,24 +239,24 @@ const SidePanel = {
 
         // Set up port message listener
         this.state.port.onMessage.addListener((message) => {
-            console.log('Sidepanel received message:', message);
+            Logger.debug('Sidepanel received message:', message);
             this.handlePortMessage(message);
         });
 
         // Handle port disconnection
         this.state.port.onDisconnect.addListener(() => {
-            console.log('Port disconnected');
+            Logger.debug('Port disconnected');
             this.cleanup();
         });
 
-        console.log('Side panel port connection established');
+        Logger.debug('Side panel port connection established');
     },
 
     handlePortMessage(message) {
         switch (message.type) {
 
             case 'elementSelected':
-                console.log('Sidepanel Element selected:', message.elementType, this.elements.chatDetectionMessage);
+                Logger.debug('Sidepanel Element selected:', message.elementType, this.elements.chatDetectionMessage);
                 this.state.selectedElements[message.elementType] = true;
 
                 if (message.elementType === 'chatArea' && this.elements.chatDetectionMessage) {
@@ -267,20 +264,17 @@ const SidePanel = {
                 }
 
                 if (this.state.selectedElements['chatArea'] && this.state.selectedElements['inputArea']) {
-                    console.log('myText element:', this.elements.myText);
-                    console.log('myText tabIndex:', this.elements.myText.tabIndex);
                     this.elements.myText.focus();
                     this.elements.myText.scrollIntoView();
                 }
                 break;
 
             case 'chatMessageDetected':
-                console.log('Received chat message:', message.text.substring(0, 50) + '...');
                 this.updatePartnerText(message.text);
                 break;
 
             case 'closeSidePanel':
-                console.log('Closing side panel');
+                Logger.debug('Closing side panel');
                 this.cleanup();
                 window.close();
                 break;
@@ -290,7 +284,7 @@ const SidePanel = {
     // Method to send messages through the port
     sendMessage(message) {
         if (!this.state.port) {
-            console.log('Port connection not established', message);
+            Logger.info('Port connection not established', message);
             this.setupPortListeners();
         }
         if (this.state.port) {
@@ -299,7 +293,7 @@ const SidePanel = {
     },
 
     setupEventListeners() {
-        console.log('Sidepanel setting up event listeners ***', this.state.tabId);
+        Logger.debug('Sidepanel setting up event listeners ***', this.state.tabId);
 
         // Add event listeners
         this.elements.myText.addEventListener('input', this.listeners.myTextInput);
@@ -316,7 +310,7 @@ const SidePanel = {
     },
 
     async handleSend() {
-        console.log('Sidepanel Sending message to content script');
+        Logger.debug('Sidepanel Sending message to content script');
         const myTextValue = this.elements.myText.value;
         const translatedMyText = this.elements.myTranslatedText.value;
         const partnerTextValue = this.elements.partnerText.value;
@@ -336,13 +330,12 @@ const SidePanel = {
         navigator.clipboard.writeText(translatedMyText).then(() => {
             handleUserMessage('My translated text copied!', 'success');
         }).catch(err => {
-            console.log('Error copying text to clipboard:', err);
+            Logger.warn('Error copying text to clipboard:', err);
         });
 
         // Send message to content script
         const finalTranslatedText = this.elements.myTranslatedText.value;
         setTimeout(() => {
-            console.log('Sidepanel Injecting text into chat:', finalTranslatedText);
             if (finalTranslatedText) {
                 this.sendMessage({
                     type: 'injectTextIntoChat',
@@ -355,14 +348,12 @@ const SidePanel = {
     },
 
     cleanup() {
-        console.log('Cleaning up port connection');
-
         // Disconnect port if it exists
         if (this.state.port) {
             try {
                 this.state.port.disconnect();
             } catch (error) {
-                console.error('Error disconnecting port:', error);
+                Logger.warn('Error disconnecting port:', error);
             }
             this.state.port = null;
         }
@@ -383,36 +374,25 @@ const SidePanel = {
     },
 
     async init() {
-        console.log('Sidepanel Initializing...');
         this.elements = this.getElements();
-        console.log('Sidepanel Elements:', this.elements);
         this.state = this.initState();
-        console.log('Sidepanel State:', this.state);
         this.initManualSelectionUI();
-        console.log('Sidepanel Manual selection UI initialized');
         this.initDisplay();
-        console.log('Sidepanel Display initialized');
         this.initHistory();
-        console.log('Sidepanel History initialized');
 
         // Initialize tab and message listeners first
         await this.initializeTab();
-        console.log('Sidepanel Tab initialized');
 
         // Then initialize the rest
         await this.initLanguages();
-        console.log('Sidepanel Languages initialized');
         await TranslationService.initTranslation(this.state.selectedLanguages);
-        console.log('Sidepanel Translation initialized');
         this.setupEventListeners();
-        console.log('Sidepanel initialization complete');
     }
 };
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function initSidePanel() {
-    console.log('SidePanel loaded');
+    Logger.info('SidePanel loaded');
     SidePanel.init();
     document.removeEventListener('DOMContentLoaded', initSidePanel);
 });
-

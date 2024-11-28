@@ -1,4 +1,5 @@
 import { handleUserMessage } from "../utils/userMessageUtil";
+import { Logger } from "../utils/logger";
 
 export const TranslationService = {
     myToPartnerTranslator: null,
@@ -21,7 +22,7 @@ export const TranslationService = {
             return await translation.createTranslator(languagePair);
         } catch (error) {
             handleUserMessage('Error setting translation', 'error');
-            console.error('Error setting translation', error);
+            Logger.warn('Error setting translation', error);
             return null;
         }
     },
@@ -43,7 +44,7 @@ export const TranslationService = {
             return true;
         } catch (error) {
             handleUserMessage('Failed to setup translation', 'error');
-            console.error('Failed to setup translation', error);
+            Logger.warn('Failed to setup translation', error);
             return false;
         }
     },
@@ -51,6 +52,11 @@ export const TranslationService = {
     async translateText(text, isPartnerToMy = false) {
         const translator = isPartnerToMy ? this.partnerToMyTranslator : this.myToPartnerTranslator;
         if (!translator) return '';
-        return await translator.translate(text);
+        try {
+            return await translator.translate(text);
+        } catch (error) {
+            Logger.warn('Translation error:', error);
+            return '';
+        }
     }
 };

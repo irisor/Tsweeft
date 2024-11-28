@@ -12,3 +12,7 @@ https://support.google.com/chrome/answer/173424?hl=en&co=GENIE.Platform%3DDeskto
 
 * Built-in AI Early Preview Program - The Translation API - https://docs.google.com/document/d/1bzpeKk4k26KfjtR-_d9OuXLMpJdRMiLZAOVNMuFIejk/edit?tab=t.0
 
+### Deployment
+* `npm run package` - create extension.zip file ready to be uploaded to chrome store
+
+
