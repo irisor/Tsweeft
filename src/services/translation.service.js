@@ -19,7 +19,7 @@ export const TranslationService = {
         }
 
         try {
-            return await translation.createTranslator(languagePair);
+            return await self.ai.translator.create(languagePair);
         } catch (error) {
             handleUserMessage('Error setting translation', 'error');
             Logger.warn('Error setting translation', error);
