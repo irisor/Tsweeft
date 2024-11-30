@@ -6,7 +6,6 @@
   "description": "A chat helper for multi-language communication",
   "permissions": [
     "activeTab",
-    "scripting",
     "sidePanel",
     "storage"
   ],
