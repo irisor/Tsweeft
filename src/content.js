@@ -27,7 +27,6 @@ const { signal: cleanupSignal } = cleanupController;
 
 setupEventListeners();
 
-
 // Cleanup function to handle observer disconnection
 function cleanup() {
     if (!isSidepanelOpen) return;
@@ -279,8 +278,6 @@ function removeHighlighters() {
     for (const highlighter of highlighters) {
         highlighter.remove();
     }
-
-    if (highlighters && highlighters.length) highlighters.length = 0;
 }
 
 function updateHighlighterPosition(highlighter) {
