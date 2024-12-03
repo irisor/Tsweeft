@@ -11,12 +11,13 @@ export const TranslationService = {
             targetLanguage: toLang,
         };
         
-        const canTranslate = await translation.canTranslate(languagePair);
+        // const canTranslate = await translation.canTranslate(languagePair);
+        // console.log('*** Can translate?', canTranslate);
 
-        if (canTranslate === 'no') {
-            handleUserMessage('No translation available for this language pair', 'error');
-            return null;
-        }
+        // if (canTranslate === 'no') {
+        //     handleUserMessage('No translation available for this language pair', 'error');
+        //     return null;
+        // }
 
         try {
             if (self.ai?.translator) {
@@ -25,8 +26,8 @@ export const TranslationService = {
                 return await translation.createTranslator(languagePair);
             }
         } catch (error) {
-            handleUserMessage('Error setting translation', 'error');
-            Logger.warn('Error setting translation', error);
+            handleUserMessage('No translation available for this language pair', 'error');
+            Logger.warn('No translation available for this language pair', error);
             return null;
         }
     },
