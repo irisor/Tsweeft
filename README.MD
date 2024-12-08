@@ -3,6 +3,7 @@
 ## What is Tsweeft?
 
 Tsweeft is a Chrome extension that provides real-time multilanguage chat support. It allows users to translate chat messages between two languages, making online written conversations flow more naturally.
+
 See Youtube video for more info: https://youtu.be/AjXGiMVUV4M
 
 ### Features
@@ -38,3 +39,7 @@ https://support.google.com/chrome/answer/173424?hl=en&co=GENIE.Platform%3DDeskto
 
 ### Deployment
 * `npm run package` - create extension.zip file ready to be uploaded to chrome store
+
+### Resetting language selectcion
+await chrome.storage.local.remove('selectedLanguages');
+Can be used from the extension's sidepanel devtools to reset the language selection in case of issues

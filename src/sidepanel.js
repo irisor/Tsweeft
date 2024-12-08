@@ -125,9 +125,6 @@ const SidePanel = {
         this.state.tabId = tabs[0].id;
         Logger.debug('Sidepanel tab initialized with Tab ID:', this.state.tabId);
 
-        // Set up message listeners before sending initialization message
-        this.setupPortListeners();
-
         try {
             this.sendMessage({
                 type: 'sidePanelOpened',
@@ -232,6 +229,10 @@ const SidePanel = {
         // Disconnect any existing port
         if (this.state.port) {
             this.state.port.disconnect();
+        }
+
+        if (!this.state.tabId) {
+            this.initializeTab();
         }
 
         // Create a long-lived connection
@@ -382,11 +383,14 @@ const SidePanel = {
 
         // Initialize tab and message listeners first
         await this.initializeTab();
+        // Set up message listeners before sending initialization message
+        this.setupPortListeners();
 
+
+        this.setupEventListeners();
         // Then initialize the rest
         await this.initLanguages();
         await TranslationService.initTranslation(this.state.selectedLanguages);
-        this.setupEventListeners();
     }
 };
 

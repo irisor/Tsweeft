@@ -27,6 +27,17 @@ const { signal: cleanupSignal } = cleanupController;
 
 setupEventListeners();
 
+const handleResizeAndScroll = debounce(() => {
+    Logger.debug('handleResizeAndScroll - Updating highlighter position');
+    if (activeHighlighter) {
+        updateHighlighterPosition(activeHighlighter);
+    }
+    highlighters.forEach(highlighter => {
+        updateHighlighterPosition(highlighter);
+    });
+}, 100);
+
+
 // Cleanup function to handle observer disconnection
 function cleanup() {
     if (!isSidepanelOpen) return;
@@ -71,6 +82,11 @@ function cleanup() {
     } catch (error) {
         Logger.warn('Error cleaning up port:', error);
     }
+
+    // Remove event listeners directly
+    window.removeEventListener('beforeunload', onBeforeunload);
+    window.removeEventListener('resize', handleResizeAndScroll);
+    document.removeEventListener('scroll', handleResizeAndScroll);
 }
 
 function cleanupPort() {
@@ -97,11 +113,11 @@ function cleanupChatObserver() {
 
 function setupEventListeners() {
     chrome.runtime.onConnect.addListener(connectListener);
-    window.addEventListener('beforeunload', onBeforeunload, { signal: cleanupSignal });
+    window.addEventListener('beforeunload', onBeforeunload);
 }
 
 function onConnectListener(port) {
-    if (port.name !== PORT_NAME) return
+    if (port.name !== PORT_NAME) return;
 
     // Disconnect any existing port
     if (connectionPort) {
@@ -154,7 +170,6 @@ function onBeforeunload() {
         Logger.warn('Content attempted to close side panel, but failed:', error);
     }
     cleanup();
-    cleanupController.abort();
 }
 
 function chatObserverElement(targetElement) {
@@ -331,6 +346,7 @@ function startElementSelection(elementType) {
     };
 
     const handleClick = (e) => {
+        Logger.debug('handleClick');
         if (!isSelectionMode) return;
 
         e.preventDefault();
@@ -367,18 +383,10 @@ function startElementSelection(elementType) {
         }
 
         // Clean up selection mode
-        cleanupSelection(cleanupSelectionController, handleMouseOver, handleMouseOut, handleClick, handleResizeAndScroll);
+        cleanupSelection(cleanupSelectionController, handleMouseOver, handleMouseOut, handleClick);
 
         sendPortMessage({ type: 'elementSelected', elementType });
     };
-
-    const handleResizeAndScroll = debounce(() => {
-        Object.keys(permanentHighlighters).forEach((elementType) => {
-            if (permanentHighlighters[elementType]) {
-                updateHighlighterPosition(permanentHighlighters[elementType]);
-            }
-        });
-    }, 100);
 
     // Use capturing phase for events
     document.addEventListener('mouseover', handleMouseOver, { capture: true, signal: cleanupSelectionSignal });
@@ -388,20 +396,21 @@ function startElementSelection(elementType) {
     // These events are used to update the highlighter position
     // They use the cleanupSignal and not the cleanupSelectionSignal because they should'nt be cleaned up
     // when the selection mode is closed
-    window.addEventListener('resize', handleResizeAndScroll, { passive: true, signal: cleanupSignal });
-    document.addEventListener('scroll', handleResizeAndScroll, { passive: true, signal: cleanupSignal });
+    Logger.debug('Adding resize and scroll event listeners');
+    window.addEventListener('resize', handleResizeAndScroll, { passive: true });
+    document.addEventListener('scroll', handleResizeAndScroll, { passive: true });
 
     window.addEventListener('beforeunload', () => {
-        cleanupSelection(cleanupSelectionController, handleMouseOver, handleMouseOut, handleClick, handleResizeAndScroll);
+        cleanupSelection(cleanupSelectionController, handleMouseOver, handleMouseOut, handleClick);
     }, { once: true, signal: cleanupSelectionSignal });
 
     document.addEventListener('sidePanelClosed', () => {
         Logger.debug('StartElementSelection Sidepanel closed');
-        cleanupSelection(cleanupSelectionController, handleMouseOver, handleMouseOut, handleClick, handleResizeAndScroll);
+        cleanupSelection(cleanupSelectionController, handleMouseOver, handleMouseOut, handleClick);
     }, { once: true, signal: cleanupSelectionSignal });
 
 
-    function cleanupSelection(cleanupSelectionController, mouseOverHandler, mouseOutHandler, clickHandler, resizeAndScrollHandler) {
+    function cleanupSelection(cleanupSelectionController, mouseOverHandler, mouseOutHandler, clickHandler) {
         cleanupSelectionController.abort();
 
         if (activeHighlighter) {
